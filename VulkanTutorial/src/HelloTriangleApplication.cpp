@@ -376,7 +376,6 @@ bool HelloTriangleApplication::isDeviceSuitable(VkPhysicalDevice device)
 	}
 
 	return
-		deviceProperties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU &&
 		deviceFeatures.geometryShader &&
 		indices.isComplete() &&
 		extensionsSupported &&
