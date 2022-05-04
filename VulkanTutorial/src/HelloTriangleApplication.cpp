@@ -159,9 +159,11 @@ void HelloTriangleApplication::cleanup()
 {
 	// Every vkCreate should have a vkDestory
 	// Every vkAllocate should have a vkFree
+
 	vkDestroySemaphore(device, imageAvailableSemaphore, nullptr);
 	vkDestroySemaphore(device, renderFinishedSemaphore, nullptr);
 	vkDestroyFence(device, inFlightFence, nullptr);
+
 	vkDestroyCommandPool(device, commandPool, nullptr);
 	for (auto framebuffer : swapChainFramebuffers)
 	{
@@ -1010,7 +1012,7 @@ void HelloTriangleApplication::createSyncObjects()
 
 	VkFenceCreateInfo fenceInfo{};
 	fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-	// initially, the fence is signaled (for the first frame to work)
+	// create the fence in the signaled state for the first frame
 	fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
 	if (
@@ -1030,19 +1032,22 @@ void HelloTriangleApplication::drawFrame()
 	vkWaitForFences(device, 1, &inFlightFence, VK_TRUE, UINT64_MAX);
 	vkResetFences(device, 1, &inFlightFence);
 
-	// Acquire an image from the swap chain
+	// acquire the next available image that your application should render to
 	uint32_t imageIndex;
 	vkAcquireNextImageKHR(
 		device,
 		swapChain,
+		// disable the timeout
 		UINT64_MAX,
-		// specify synchronization objects that are to be signaled when the presentation engine is finished using the image
+		// specify synchronization objects that are to be signaled when it is safe to render to the image
 		imageAvailableSemaphore,
+		// no fence is needed here
 		VK_NULL_HANDLE,
 		// The last parameter specifies a variable to output the index of the swap chain image that has become available
 		&imageIndex);
 
-	// 	Record a command buffer which draws the scene onto that image
+	// Record a command buffer which draws the scene onto that image
+	// reset the command buffer to make sure the command buffer is able to be recorded
 	vkResetCommandBuffer(commandBuffer, 0);
 	recordCommandBuffer(commandBuffer, imageIndex);
 

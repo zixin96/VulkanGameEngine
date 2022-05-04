@@ -150,7 +150,10 @@ private:
 	VkCommandPool commandPool;
 	VkCommandBuffer commandBuffer;
 
+	// signal that an image has been acquired from the swapchain and is ready for rendering
 	VkSemaphore imageAvailableSemaphore;
+	// signal that rendering has finished and presentation can happen
 	VkSemaphore renderFinishedSemaphore;
+	// make sure only one frame is rendering at a time 
 	VkFence inFlightFence;
 };
