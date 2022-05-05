@@ -32,21 +32,6 @@ struct SwapChainSupportDetails
 	std::vector<VkPresentModeKHR> presentModes;
 };
 
-/**
- * This class stores the Vulkan objects as private class members
- * and has functions to initiate each of them
- *
- * Error handling: If any kind of fatal error occurs during execution
- * then we'll throw a std::runtime_error exception with a descriptive message,
- * which will propagate back to the main functions
- *
- * Resource management: We choose to be explicit about allocation and deallocation of Vulkan objects
- * More complex vulkan application should use RAII model.
- * Vulkan objects creation: {vkCreateXXX, vkAllocateXXX}
- * Vulkan objects deletion: {vkDestroyXXX, vkFreeXXX}
- * PS: These functions share a common parameter pAllocator, which specifies callbacks for a custom memory allocator
- * In this tutorial, pAllocator is always nullptr
- */
 class HelloTriangleApplication
 {
 public:
@@ -55,36 +40,21 @@ private:
 	void initWindow();
 	static void framebufferResizeCallback(GLFWwindow* window, int width, int height);
 	void initVulkan();
-
 	void mainLoop();
-
 	// TODO: how do I know which objects should be cleaned up? 
 	void cleanup();
 private:
-	// The very first thing to initialize must be an instance, which is the connection between your application and the Vulkan library
 	void createInstance();
-
-	// return true if all extensions specified in instanceExtensions are supported by our vulkan instance
 	bool checkInstanceExtensionsSupport();
-
-	// return true if all layers specified in validationLayers are supported 
 	bool checkValidationLayerSupport();
-
 private:
+	// TODO: how to use vk_layer_settings.txt file to configure the layers? Why do we need this? 
 	void setupDebugMessenger();
 	void populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo);
 private:
-	// Window surface creation
 	void createSurface();
 private:
-	// pick the first suitable device available to us
 	void pickPhysicalDevice();
-
-	// the device is suitable if
-	// 1. it is a discrete GPU
-	// 2. supports geometry shaders
-	// 3. has a graphics queue family and a presentation queue
-	// 4. supports swap chain 
 	bool isDeviceSuitable(VkPhysicalDevice device);
 
 	// look for all the queue families we need
@@ -128,10 +98,8 @@ private:
 private:
 	void drawFrame();
 private:
-	GLFWwindow* m_window;
-	// instance is the connection between your application and the Vulkan library
+	GLFWwindow* window;
 	VkInstance instance;
-
 	VkDebugUtilsMessengerEXT debugMessenger;
 	VkSurfaceKHR surface;
 	VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;

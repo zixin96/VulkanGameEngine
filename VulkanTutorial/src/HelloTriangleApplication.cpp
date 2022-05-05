@@ -124,9 +124,9 @@ void HelloTriangleApplication::initWindow()
 	// do not create an OpenGL context
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 	// create the actual window.
-	m_window = glfwCreateWindow(WIDTH, HEIGHT, "Vulkan Renderer", nullptr, nullptr);
-	glfwSetWindowUserPointer(m_window, this);
-	glfwSetFramebufferSizeCallback(m_window, framebufferResizeCallback);
+	window = glfwCreateWindow(WIDTH, HEIGHT, "Vulkan Renderer", nullptr, nullptr);
+	glfwSetWindowUserPointer(window, this);
+	glfwSetFramebufferSizeCallback(window, framebufferResizeCallback);
 }
 
 void HelloTriangleApplication::framebufferResizeCallback(GLFWwindow* window, int width, int height)
@@ -137,24 +137,37 @@ void HelloTriangleApplication::framebufferResizeCallback(GLFWwindow* window, int
 
 void HelloTriangleApplication::initVulkan()
 {
+	// Instance creation
 	createInstance();
+	// Debugging support
 	setupDebugMessenger();
+	// Window surface creation
 	createSurface();
+	// Physical device and queue families selection
 	pickPhysicalDevice();
+	// Logical device creation
 	createLogicalDevice();
+	// Swap chain creation
 	createSwapChain();
+	// Image views creation
 	createImageViews();
+	// Render pass creation
 	createRenderPass();
+	// Graphics pipeline creation
 	createGraphicsPipeline();
+	// Framebuffers creation
 	createFramebuffers();
+	// Command pool creation
 	createCommandPool();
+	// Command buffers creation
 	createCommandBuffers();
+	// Synchronization objects creation
 	createSyncObjects();
 }
 
 void HelloTriangleApplication::mainLoop()
 {
-	while (!glfwWindowShouldClose(m_window))
+	while (!glfwWindowShouldClose(window))
 	{
 		glfwPollEvents();
 		drawFrame();
@@ -184,7 +197,7 @@ void HelloTriangleApplication::cleanup()
 	vkDestroySurfaceKHR(instance, surface, nullptr);
 	vkDestroyInstance(instance, nullptr);
 	// GLFW clean up
-	glfwDestroyWindow(m_window);
+	glfwDestroyWindow(window);
 	glfwTerminate();
 }
 
@@ -320,7 +333,7 @@ void HelloTriangleApplication::populateDebugMessengerCreateInfo(VkDebugUtilsMess
 
 void HelloTriangleApplication::createSurface()
 {
-	if (glfwCreateWindowSurface(instance, m_window, nullptr, &surface) != VK_SUCCESS)
+	if (glfwCreateWindowSurface(instance, window, nullptr, &surface) != VK_SUCCESS)
 	{
 		throw std::runtime_error("failed to create window surface!");
 	}
@@ -337,6 +350,7 @@ void HelloTriangleApplication::pickPhysicalDevice()
 	}
 	std::vector<VkPhysicalDevice> devices(deviceCount);
 	vkEnumeratePhysicalDevices(instance, &deviceCount, devices.data());
+	// find the first suitable physical device
 	for (const auto& device : devices)
 	{
 		if (isDeviceSuitable(device))
@@ -507,10 +521,10 @@ void HelloTriangleApplication::cleanupSwapChain()
 void HelloTriangleApplication::recreateSwapChain()
 {
 	int width = 0, height = 0;
-	glfwGetFramebufferSize(m_window, &width, &height);
+	glfwGetFramebufferSize(window, &width, &height);
 	while (width == 0 || height == 0)
 	{
-		glfwGetFramebufferSize(m_window, &width, &height);
+		glfwGetFramebufferSize(window, &width, &height);
 		glfwWaitEvents();
 	}
 
@@ -944,7 +958,7 @@ VkExtent2D HelloTriangleApplication::chooseSwapExtent(const VkSurfaceCapabilitie
 	// Otherwise, 
 	// pick the resolution that best matches the window within the minImageExtent and maxImageExtent bounds
 	int width, height;
-	glfwGetFramebufferSize(m_window, &width, &height);
+	glfwGetFramebufferSize(window, &width, &height);
 	VkExtent2D actualExtent = {
 		static_cast<uint32_t>(width),
 		static_cast<uint32_t>(height)
