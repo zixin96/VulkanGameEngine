@@ -1081,8 +1081,8 @@ void HelloTriangleApplication::createVertexBuffer()
 uint32_t HelloTriangleApplication::findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties)
 {
 	VkPhysicalDeviceMemoryProperties memProperties;
-
 	vkGetPhysicalDeviceMemoryProperties(physicalDevice, &memProperties);
+
 	for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++)
 	{
 		if (
