@@ -1,7 +1,6 @@
 #pragma once
 
-// #include <vulkan/vulkan.h>
-// GLFW will include vulkan header with it
+// GLFW will #include <vulkan/vulkan.h> with it
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 
@@ -54,11 +53,12 @@ public:
 	void run();
 private:
 	void initWindow();
-
+	static void framebufferResizeCallback(GLFWwindow* window, int width, int height);
 	void initVulkan();
 
 	void mainLoop();
 
+	// TODO: how do I know which objects should be cleaned up? 
 	void cleanup();
 private:
 	// The very first thing to initialize must be an instance, which is the connection between your application and the Vulkan library
@@ -106,6 +106,8 @@ private:
 private:
 	void createLogicalDevice();
 private:
+	void cleanupSwapChain();
+	void recreateSwapChain();
 	void createSwapChain();
 	void createImageViews();
 private:
@@ -119,16 +121,17 @@ private:
 	void createFramebuffers();
 private:
 	void createCommandPool();
-	void createCommandBuffer();
+	void createCommandBuffers();
 	void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex);
 private:
 	void createSyncObjects();
 private:
 	void drawFrame();
 private:
-	GLFWwindow* window;
+	GLFWwindow* m_window;
 	// instance is the connection between your application and the Vulkan library
 	VkInstance instance;
+
 	VkDebugUtilsMessengerEXT debugMessenger;
 	VkSurfaceKHR surface;
 	VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
@@ -148,12 +151,15 @@ private:
 	std::vector<VkFramebuffer> swapChainFramebuffers;
 
 	VkCommandPool commandPool;
-	VkCommandBuffer commandBuffer;
+	std::vector<VkCommandBuffer> commandBuffers;
 
 	// signal that an image has been acquired from the swapchain and is ready for rendering
-	VkSemaphore imageAvailableSemaphore;
+	std::vector<VkSemaphore> imageAvailableSemaphores;
 	// signal that rendering has finished and presentation can happen
-	VkSemaphore renderFinishedSemaphore;
+	std::vector<VkSemaphore> renderFinishedSemaphores;
 	// make sure only one frame is rendering at a time 
-	VkFence inFlightFence;
+	std::vector<VkFence> inFlightFences;
+	bool framebufferResized = false;
+
+	uint32_t currentFrame = 0;
 };

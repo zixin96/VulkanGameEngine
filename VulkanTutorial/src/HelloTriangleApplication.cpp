@@ -13,6 +13,8 @@
 
 const uint32_t WIDTH = 800;
 const uint32_t HEIGHT = 600;
+// how many frames should be processed concurrently
+const int MAX_FRAMES_IN_FLIGHT = 2;
 
 const std::vector<const char*> validationLayers = {
 	"VK_LAYER_KHRONOS_validation"
@@ -115,22 +117,26 @@ void HelloTriangleApplication::run()
 	cleanup();
 }
 
-
 void HelloTriangleApplication::initWindow()
 {
 	// initialize the GLFW library
 	glfwInit();
 	// do not create an OpenGL context
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-	// we don't handling resized window for now
-	glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
 	// create the actual window.
-	window = glfwCreateWindow(WIDTH, HEIGHT, "Vulkan", nullptr, nullptr);
+	m_window = glfwCreateWindow(WIDTH, HEIGHT, "Vulkan Renderer", nullptr, nullptr);
+	glfwSetWindowUserPointer(m_window, this);
+	glfwSetFramebufferSizeCallback(m_window, framebufferResizeCallback);
+}
+
+void HelloTriangleApplication::framebufferResizeCallback(GLFWwindow* window, int width, int height)
+{
+	auto app = reinterpret_cast<HelloTriangleApplication*>(glfwGetWindowUserPointer(window));
+	app->framebufferResized = true;
 }
 
 void HelloTriangleApplication::initVulkan()
 {
-	// The very first thing to initialize must be an instance
 	createInstance();
 	setupDebugMessenger();
 	createSurface();
@@ -142,41 +148,34 @@ void HelloTriangleApplication::initVulkan()
 	createGraphicsPipeline();
 	createFramebuffers();
 	createCommandPool();
-	createCommandBuffer();
+	createCommandBuffers();
 	createSyncObjects();
 }
 
 void HelloTriangleApplication::mainLoop()
 {
-	while (!glfwWindowShouldClose(window))
+	while (!glfwWindowShouldClose(m_window))
 	{
 		glfwPollEvents();
 		drawFrame();
 	}
+	// wait for the logical device to finish operations
+	vkDeviceWaitIdle(device);
 }
 
 void HelloTriangleApplication::cleanup()
 {
-	// Every vkCreate should have a vkDestory
-	// Every vkAllocate should have a vkFree
+	cleanupSwapChain();
 
-	vkDestroySemaphore(device, imageAvailableSemaphore, nullptr);
-	vkDestroySemaphore(device, renderFinishedSemaphore, nullptr);
-	vkDestroyFence(device, inFlightFence, nullptr);
+	for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
+	{
+		vkDestroySemaphore(device, renderFinishedSemaphores[i], nullptr);
+		vkDestroySemaphore(device, imageAvailableSemaphores[i], nullptr);
+		vkDestroyFence(device, inFlightFences[i], nullptr);
+	}
 
 	vkDestroyCommandPool(device, commandPool, nullptr);
-	for (auto framebuffer : swapChainFramebuffers)
-	{
-		vkDestroyFramebuffer(device, framebuffer, nullptr);
-	}
-	vkDestroyPipeline(device, graphicsPipeline, nullptr);
-	vkDestroyPipelineLayout(device, pipelineLayout, nullptr);
-	vkDestroyRenderPass(device, renderPass, nullptr);
-	for (auto imageView : swapChainImageViews)
-	{
-		vkDestroyImageView(device, imageView, nullptr);
-	}
-	vkDestroySwapchainKHR(device, swapChain, nullptr);
+
 	vkDestroyDevice(device, nullptr);
 	if (enableValidationLayers)
 	{
@@ -184,12 +183,14 @@ void HelloTriangleApplication::cleanup()
 	}
 	vkDestroySurfaceKHR(instance, surface, nullptr);
 	vkDestroyInstance(instance, nullptr);
-	glfwDestroyWindow(window);
+	// GLFW clean up
+	glfwDestroyWindow(m_window);
 	glfwTerminate();
 }
 
 void HelloTriangleApplication::createInstance()
 {
+	// check if the requested validation layers and instance extensions are supported
 	if (enableValidationLayers && !checkValidationLayerSupport())
 	{
 		throw std::runtime_error("validation layers requested, but not available!");
@@ -199,7 +200,9 @@ void HelloTriangleApplication::createInstance()
 		throw std::runtime_error("extensions requested, but not available!");
 	}
 
-	// to create an instance, we need to fill in a struct with some information about our application
+	VkInstanceCreateInfo createInfo{};
+	createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
+
 	VkApplicationInfo appInfo{};
 	appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
 	appInfo.pApplicationName = "Hello Triangle";
@@ -207,9 +210,6 @@ void HelloTriangleApplication::createInstance()
 	appInfo.pEngineName = "No Engine";
 	appInfo.engineVersion = VK_MAKE_VERSION(1, 0, 0);
 	appInfo.apiVersion = VK_API_VERSION_1_0;
-	// to create an instance, we also need to fill in a struct with some information about which global extensions and validation layers we want to use
-	VkInstanceCreateInfo createInfo{};
-	createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
 	createInfo.pApplicationInfo = &appInfo;
 
 	// specify the desired global extensions
@@ -234,7 +234,7 @@ void HelloTriangleApplication::createInstance()
 		createInfo.enabledLayerCount = 0;
 		createInfo.pNext = nullptr;
 	}
-	// create vulkan instance
+
 	if (vkCreateInstance(&createInfo, nullptr, &instance) != VK_SUCCESS)
 	{
 		throw std::runtime_error("failed to create instance!");
@@ -248,10 +248,10 @@ bool HelloTriangleApplication::checkInstanceExtensionsSupport()
 	vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, nullptr);
 	std::vector<VkExtensionProperties> availableExtensions(extensionCount);
 	vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, availableExtensions.data());
-	std::cout << "available instance extensions:\n";
+	// std::cout << "available instance extensions:\n";
 	for (const auto& extension : availableExtensions)
 	{
-		std::cout << '\t' << extension.extensionName << '\n';
+		// std::cout << '\t' << extension.extensionName << '\n';
 	}
 	// check if our desired instance extensions are supported 
 	std::set<std::string> requiredExtensions(instanceExtensions.begin(), instanceExtensions.end());
@@ -270,10 +270,10 @@ bool HelloTriangleApplication::checkValidationLayerSupport()
 	std::vector<VkLayerProperties> availableLayers(layerCount);
 	vkEnumerateInstanceLayerProperties(&layerCount, availableLayers.data());
 	std::vector<std::string> availLayerName;
-	std::cout << "available layers:\n";
+	// std::cout << "available layers:\n";
 	for (const auto& layerProperties : availableLayers)
 	{
-		std::cout << '\t' << layerProperties.layerName << '\n';
+		// std::cout << '\t' << layerProperties.layerName << '\n';
 	}
 	// check if our desired layers are supported 
 	std::set<std::string> requiredLayers(validationLayers.begin(), validationLayers.end());
@@ -320,7 +320,7 @@ void HelloTriangleApplication::populateDebugMessengerCreateInfo(VkDebugUtilsMess
 
 void HelloTriangleApplication::createSurface()
 {
-	if (glfwCreateWindowSurface(instance, window, nullptr, &surface) != VK_SUCCESS)
+	if (glfwCreateWindowSurface(instance, m_window, nullptr, &surface) != VK_SUCCESS)
 	{
 		throw std::runtime_error("failed to create window surface!");
 	}
@@ -424,10 +424,10 @@ bool HelloTriangleApplication::checkDeviceExtensionSupport(VkPhysicalDevice devi
 	vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, nullptr);
 	std::vector<VkExtensionProperties> availableExtensions(extensionCount);
 	vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, availableExtensions.data());
-	std::cout << "available device extensions:\n";
+	// std::cout << "available device extensions:\n";
 	for (const auto& extension : availableExtensions)
 	{
-		std::cout << '\t' << extension.extensionName << '\n';
+		// std::cout << '\t' << extension.extensionName << '\n';
 	}
 	// check if our desired device extensions are supported 
 	std::set<std::string> requiredExtensions(deviceExtensions.begin(), deviceExtensions.end());
@@ -486,6 +486,44 @@ void HelloTriangleApplication::createLogicalDevice()
 	// Retrieving queue handles
 	vkGetDeviceQueue(device, indices.graphicsFamily.value(), 0, &graphicsQueue);
 	vkGetDeviceQueue(device, indices.presentFamily.value(), 0, &presentQueue);
+}
+
+void HelloTriangleApplication::cleanupSwapChain()
+{
+	for (auto framebuffer : swapChainFramebuffers)
+	{
+		vkDestroyFramebuffer(device, framebuffer, nullptr);
+	}
+	vkDestroyPipeline(device, graphicsPipeline, nullptr);
+	vkDestroyPipelineLayout(device, pipelineLayout, nullptr);
+	vkDestroyRenderPass(device, renderPass, nullptr);
+	for (auto imageView : swapChainImageViews)
+	{
+		vkDestroyImageView(device, imageView, nullptr);
+	}
+	vkDestroySwapchainKHR(device, swapChain, nullptr);
+}
+
+void HelloTriangleApplication::recreateSwapChain()
+{
+	int width = 0, height = 0;
+	glfwGetFramebufferSize(m_window, &width, &height);
+	while (width == 0 || height == 0)
+	{
+		glfwGetFramebufferSize(m_window, &width, &height);
+		glfwWaitEvents();
+	}
+
+	vkDeviceWaitIdle(device);
+	// make sure that the old versions of these objects are cleaned up before recreating them
+	cleanupSwapChain();
+
+	createSwapChain();
+	// all of the creation functions for the objects that depend on the swap chain or the window size
+	createImageViews();
+	createRenderPass();
+	createGraphicsPipeline();
+	createFramebuffers();
 }
 
 void HelloTriangleApplication::createSwapChain()
@@ -632,12 +670,23 @@ void HelloTriangleApplication::createRenderPass()
 	subpass.pColorAttachments = &colorAttachmentRef;
 
 	// Render pass
+	// TODO: Why do we need subpass dependency? 
+	VkSubpassDependency dependency{};
+	dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
+	dependency.dstSubpass = 0;
+	dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+	dependency.srcAccessMask = 0;
+	dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+	dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+
 	VkRenderPassCreateInfo renderPassInfo{};
 	renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
 	renderPassInfo.attachmentCount = 1;
 	renderPassInfo.pAttachments = &colorAttachment;
 	renderPassInfo.subpassCount = 1;
 	renderPassInfo.pSubpasses = &subpass;
+	renderPassInfo.dependencyCount = 1;
+	renderPassInfo.pDependencies = &dependency;
 
 	if (vkCreateRenderPass(device, &renderPassInfo, nullptr, &renderPass) != VK_SUCCESS)
 	{
@@ -895,7 +944,7 @@ VkExtent2D HelloTriangleApplication::chooseSwapExtent(const VkSurfaceCapabilitie
 	// Otherwise, 
 	// pick the resolution that best matches the window within the minImageExtent and maxImageExtent bounds
 	int width, height;
-	glfwGetFramebufferSize(window, &width, &height);
+	glfwGetFramebufferSize(m_window, &width, &height);
 	VkExtent2D actualExtent = {
 		static_cast<uint32_t>(width),
 		static_cast<uint32_t>(height)
@@ -950,16 +999,17 @@ void HelloTriangleApplication::createCommandPool()
 	}
 }
 
-void HelloTriangleApplication::createCommandBuffer()
+void HelloTriangleApplication::createCommandBuffers()
 {
+	commandBuffers.resize(MAX_FRAMES_IN_FLIGHT);
 	VkCommandBufferAllocateInfo allocInfo{};
 	allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
 	allocInfo.commandPool = commandPool;
 	// specifies if the allocated command buffers are primary or secondary command buffers
 	allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-	allocInfo.commandBufferCount = 1;
+	allocInfo.commandBufferCount = (uint32_t)commandBuffers.size();
 
-	if (vkAllocateCommandBuffers(device, &allocInfo, &commandBuffer) != VK_SUCCESS)
+	if (vkAllocateCommandBuffers(device, &allocInfo, commandBuffers.data()) != VK_SUCCESS)
 	{
 		throw std::runtime_error("failed to allocate command buffers!");
 	}
@@ -1007,6 +1057,10 @@ void HelloTriangleApplication::recordCommandBuffer(VkCommandBuffer commandBuffer
 
 void HelloTriangleApplication::createSyncObjects()
 {
+	imageAvailableSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
+	renderFinishedSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
+	inFlightFences.resize(MAX_FRAMES_IN_FLIGHT);
+
 	VkSemaphoreCreateInfo semaphoreInfo{};
 	semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
 
@@ -1015,13 +1069,14 @@ void HelloTriangleApplication::createSyncObjects()
 	// create the fence in the signaled state for the first frame
 	fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
-	if (
-		vkCreateSemaphore(device, &semaphoreInfo, nullptr, &imageAvailableSemaphore) != VK_SUCCESS ||
-		vkCreateSemaphore(device, &semaphoreInfo, nullptr, &renderFinishedSemaphore) != VK_SUCCESS ||
-		vkCreateFence(device, &fenceInfo, nullptr, &inFlightFence) != VK_SUCCESS
-	)
+	for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
 	{
-		throw std::runtime_error("failed to create semaphores!");
+		if (vkCreateSemaphore(device, &semaphoreInfo, nullptr, &imageAvailableSemaphores[i]) != VK_SUCCESS ||
+			vkCreateSemaphore(device, &semaphoreInfo, nullptr, &renderFinishedSemaphores[i]) != VK_SUCCESS ||
+			vkCreateFence(device, &fenceInfo, nullptr, &inFlightFences[i]) != VK_SUCCESS)
+		{
+			throw std::runtime_error("failed to create synchronization objects for a frame!");
+		}
 	}
 }
 
@@ -1029,38 +1084,92 @@ void HelloTriangleApplication::drawFrame()
 {
 	// At the start of the frame, we want to wait until the previous frame has finished,
 	// so that the command buffer and semaphores are available to use
-	vkWaitForFences(device, 1, &inFlightFence, VK_TRUE, UINT64_MAX);
-	vkResetFences(device, 1, &inFlightFence);
+	vkWaitForFences(device, 1, &inFlightFences[currentFrame], VK_TRUE, UINT64_MAX);
+
 
 	// acquire the next available image that your application should render to
 	uint32_t imageIndex;
-	vkAcquireNextImageKHR(
+	VkResult result = vkAcquireNextImageKHR(
 		device,
 		swapChain,
 		// disable the timeout
 		UINT64_MAX,
 		// specify synchronization objects that are to be signaled when it is safe to render to the image
-		imageAvailableSemaphore,
+		imageAvailableSemaphores[currentFrame],
 		// no fence is needed here
 		VK_NULL_HANDLE,
 		// The last parameter specifies a variable to output the index of the swap chain image that has become available
 		&imageIndex);
 
+	if (result == VK_ERROR_OUT_OF_DATE_KHR)
+	{
+		// immediately recreate the swap chain and try again in the next drawFrame call
+		recreateSwapChain();
+		return;
+	}
+	if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR)
+	{
+		throw std::runtime_error("failed to acquire swap chain image!");
+	}
+
+	// Only reset the fence if we are submitting work
+	vkResetFences(device, 1, &inFlightFences[currentFrame]);
+
 	// Record a command buffer which draws the scene onto that image
 	// reset the command buffer to make sure the command buffer is able to be recorded
-	vkResetCommandBuffer(commandBuffer, 0);
-	recordCommandBuffer(commandBuffer, imageIndex);
+	vkResetCommandBuffer(commandBuffers[currentFrame], 0);
+	recordCommandBuffer(commandBuffers[currentFrame], imageIndex);
 
 	// 	Submit the recorded command buffer
+	// only write to color attachment if image is available semaphore is signaled
+	VkSemaphore waitSemaphores[] = {imageAvailableSemaphores[currentFrame]};
+	VkPipelineStageFlags waitStages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
+
 	VkSubmitInfo submitInfo{};
 	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-	// which semaphores to wait on before execution begins
-	VkSemaphore waitSemaphores[] = { imageAvailableSemaphore };
+	// specify which semaphores to wait on before execution begins and in which stage(s) of the pipeline to wait
 	submitInfo.waitSemaphoreCount = 1;
 	submitInfo.pWaitSemaphores = waitSemaphores;
-	// which stage(s) of the pipeline to wait
-	// wait with writing colors to the image until it's available
-	VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
 	submitInfo.pWaitDstStageMask = waitStages;
-	// 	Present the swap chain image
+
+	// which command buffers to actually submit for execution
+	submitInfo.commandBufferCount = 1;
+	submitInfo.pCommandBuffers = &commandBuffers[currentFrame];
+
+	// specify which semaphores to signal once the command buffer(s) have finished execution
+	VkSemaphore signalSemaphores[] = {renderFinishedSemaphores[currentFrame]};
+	submitInfo.signalSemaphoreCount = 1;
+	submitInfo.pSignalSemaphores = signalSemaphores;
+
+	// submit the command buffer to the graphics queue
+	if (vkQueueSubmit(graphicsQueue, 1, &submitInfo, inFlightFences[currentFrame]) != VK_SUCCESS)
+	{
+		throw std::runtime_error("failed to submit draw command buffer!");
+	}
+
+	// Present the swap chain image
+	VkSwapchainKHR swapChains[] = {swapChain};
+	VkPresentInfoKHR presentInfo{};
+	presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+	// specify which semaphores to wait on before presentation can happen
+	presentInfo.waitSemaphoreCount = 1;
+	presentInfo.pWaitSemaphores = signalSemaphores;
+	// specify the swap chains to present images to and the index of the image for each swap chain
+	presentInfo.swapchainCount = 1;
+	presentInfo.pSwapchains = swapChains;
+	presentInfo.pImageIndices = &imageIndex;
+	presentInfo.pResults = nullptr; // Optional
+	// submit the request to present an image to the swap chain
+	result = vkQueuePresentKHR(presentQueue, &presentInfo);
+	if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || framebufferResized)
+	{
+		framebufferResized = false;
+		recreateSwapChain();
+	}
+	else if (result != VK_SUCCESS)
+	{
+		throw std::runtime_error("failed to present swap chain image!");
+	}
+	// advance to the next frame
+	currentFrame = (currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
 }
