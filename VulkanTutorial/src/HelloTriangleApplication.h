@@ -90,6 +90,10 @@ private:
 private:
 	void createFramebuffers();
 private:
+	void createVertexBuffer();
+	// find the right type of memory to use based on the requirements of the buffer and our own application
+	uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
+private:
 	void createCommandPool();
 	void createCommandBuffers();
 	void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex);
@@ -130,4 +134,7 @@ private:
 	bool framebufferResized = false;
 
 	uint32_t currentFrame = 0;
+
+	VkBuffer vertexBuffer;
+	VkDeviceMemory vertexBufferMemory;
 };
