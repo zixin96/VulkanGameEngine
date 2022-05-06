@@ -4,8 +4,8 @@
 #include <iostream>
 #include <stdexcept>
 
-// provides the EXIT_SUCCESS and EXIT_FAILURE macros
 #include <algorithm>
+// provides the EXIT_SUCCESS and EXIT_FAILURE macros
 #include <cstdlib>
 #include <set>
 #include <vector>
@@ -232,7 +232,6 @@ void HelloTriangleApplication::cleanup()
 	}
 
 	vkDestroyCommandPool(device, commandPool, nullptr);
-
 	vkDestroyDevice(device, nullptr);
 	if (enableValidationLayers)
 	{
