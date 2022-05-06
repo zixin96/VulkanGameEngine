@@ -55,8 +55,7 @@ private:
 	void createSurface();
 private:
 	void pickPhysicalDevice();
-	bool isDeviceSuitable(VkPhysicalDevice device);
-
+	int rateDeviceSuitability(VkPhysicalDevice device);
 	// look for all the queue families we need
 	QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device);
 
@@ -83,6 +82,8 @@ private:
 private:
 	void createRenderPass();
 private:
+	void createDescriptorSetLayout();
+private:
 	void createGraphicsPipeline();
 	// take a buffer with the bytecode as parameter and create a VkShaderModule from it
 	// VkShaderModule is just a thin wrapper around the shader bytecode
@@ -97,9 +98,15 @@ private:
 		VkBuffer& buffer,
 		VkDeviceMemory& bufferMemory);
 	void createVertexBuffer();
+	void createIndexBuffer();
 	void copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
 	// find the right type of memory to use based on the requirements of the buffer and our own application
 	uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
+
+	void createUniformBuffers();
+	void updateUniformBuffer(uint32_t currentImage);
+	void createDescriptorPool();
+	void createDescriptorSets();
 private:
 	void createCommandPool();
 	void createCommandBuffers();
@@ -125,6 +132,7 @@ private:
 	std::vector<VkImageView> swapChainImageViews;
 	VkRenderPass renderPass;
 	// for uniforms
+	VkDescriptorSetLayout descriptorSetLayout;
 	VkPipelineLayout pipelineLayout;
 	VkPipeline graphicsPipeline;
 	std::vector<VkFramebuffer> swapChainFramebuffers;
@@ -144,4 +152,13 @@ private:
 
 	VkBuffer vertexBuffer;
 	VkDeviceMemory vertexBufferMemory;
+
+	VkBuffer indexBuffer;
+	VkDeviceMemory indexBufferMemory;
+
+	std::vector<VkBuffer> uniformBuffers;
+	std::vector<VkDeviceMemory> uniformBuffersMemory;
+
+	VkDescriptorPool descriptorPool;
+	std::vector<VkDescriptorSet> descriptorSets;
 };
