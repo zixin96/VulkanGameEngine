@@ -90,6 +90,12 @@ private:
 private:
 	void createFramebuffers();
 private:
+	void createBuffer(
+		VkDeviceSize size,
+		VkBufferUsageFlags usage,
+		VkMemoryPropertyFlags properties,
+		VkBuffer& buffer,
+		VkDeviceMemory& bufferMemory);
 	void createVertexBuffer();
 	// find the right type of memory to use based on the requirements of the buffer and our own application
 	uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
