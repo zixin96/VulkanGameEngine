@@ -183,8 +183,8 @@ void HelloTriangleApplication::initWindow()
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 	// create the actual window.
 	window = glfwCreateWindow(WIDTH, HEIGHT, "Vulkan Renderer", nullptr, nullptr);
-	glfwSetWindowUserPointer(window, this);
-	glfwSetFramebufferSizeCallback(window, framebufferResizeCallback);
+	/*glfwSetWindowUserPointer(window, this);
+	glfwSetFramebufferSizeCallback(window, framebufferResizeCallback);*/
 }
 
 void HelloTriangleApplication::framebufferResizeCallback(GLFWwindow* window, int width, int height)
@@ -269,7 +269,10 @@ void HelloTriangleApplication::cleanup()
 	}
 
 	vkDestroyCommandPool(device, commandPool, nullptr);
+
+	// this call will destroy both logical device and device queues
 	vkDestroyDevice(device, nullptr);
+
 	if (enableValidationLayers)
 	{
 		DestroyDebugUtilsMessengerEXT(instance, debugMessenger, nullptr);
@@ -489,19 +492,23 @@ int HelloTriangleApplication::rateDeviceSuitability(VkPhysicalDevice device)
 		return 0;
 	}
 
-	// check if device extensions are supported by the physical device
-	bool extensionsSupported = checkDeviceExtensionSupport(device);
+	// strongly prefer a physical device that supports graphics and presentation in the same queue
+	if (indices.graphicsFamily.value() == indices.presentFamily.value())
+	{
+		score += 1000;
+	}
 
 	// check if swap chain support is sufficient
 	bool swapChainAdequate = false;
-	if (extensionsSupported)
+	if (checkDeviceExtensionSupport(device))
 	{
 		SwapChainSupportDetails swapChainSupport = querySwapChainSupport(device);
 		// swap chain support is sufficient if there is at least one supported image format and one supported presentation mode given the window surface we have
 		swapChainAdequate = !swapChainSupport.formats.empty() && !swapChainSupport.presentModes.empty();
 	}
-	// Application can't function without requested extensions or swap chain
-	if (!extensionsSupported || !swapChainAdequate)
+
+	// Application can't function without adequate swap chain support
+	if (!swapChainAdequate)
 	{
 		return 0;
 	}
@@ -593,6 +600,7 @@ void HelloTriangleApplication::createLogicalDevice()
 	// Enabling device extensions
 	createInfo.enabledExtensionCount = static_cast<uint32_t>(deviceExtensions.size());
 	createInfo.ppEnabledExtensionNames = deviceExtensions.data();
+	// Enabling device layers (deprecated)
 	if (enableValidationLayers)
 	{
 		// these are ignored by Vulkan b/c device specific validation layer is deprecated
@@ -603,12 +611,14 @@ void HelloTriangleApplication::createLogicalDevice()
 	{
 		createInfo.enabledLayerCount = 0;
 	}
+
 	if (vkCreateDevice(physicalDevice, &createInfo, nullptr, &device) != VK_SUCCESS)
 	{
 		throw std::runtime_error("failed to create logical device!");
 	}
 
 	// Retrieving queue handles
+	// we only have a single queue from each queue family. Thus, queueIndex is 0
 	vkGetDeviceQueue(device, indices.graphicsFamily.value(), 0, &graphicsQueue);
 	vkGetDeviceQueue(device, indices.presentFamily.value(), 0, &presentQueue);
 }
@@ -655,9 +665,14 @@ void HelloTriangleApplication::createSwapChain()
 {
 	SwapChainSupportDetails swapChainSupport = querySwapChainSupport(physicalDevice);
 
+	// choose the right settings for the swap chain:
+	// color depth
 	VkSurfaceFormatKHR surfaceFormat = chooseSwapSurfaceFormat(swapChainSupport.formats);
+	// conditions for "swapping" images to the screen
 	VkPresentModeKHR presentMode = chooseSwapPresentMode(swapChainSupport.presentModes);
+	// resolution of images in swap chain
 	VkExtent2D extent = chooseSwapExtent(swapChainSupport.capabilities);
+
 	// request at least one more image than the minimum to avoid waiting on the driver to
 	// complete internal operations before we can acquire another image to render to
 	uint32_t imageCount = swapChainSupport.capabilities.minImageCount + 1;
@@ -1025,8 +1040,9 @@ VkShaderModule HelloTriangleApplication::createShaderModule(const std::vector<ch
 
 SwapChainSupportDetails HelloTriangleApplication::querySwapChainSupport(VkPhysicalDevice device)
 {
-	// query basic surface capabilities
 	SwapChainSupportDetails details;
+
+	// query basic surface capabilities
 	vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, surface, &details.capabilities);
 
 	// query the supported surface formats
@@ -1055,9 +1071,8 @@ VkSurfaceFormatKHR HelloTriangleApplication::chooseSwapSurfaceFormat(
 {
 	for (const auto& availableFormat : availableFormats)
 	{
-		// we choose a surface format that has the SRGB color space with an 8 bit unsigned integer for a total of 32 bits per pixel
-		if (availableFormat.format == VK_FORMAT_B8G8R8A8_SRGB &&
-			availableFormat.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR)
+		if (availableFormat.format == VK_FORMAT_B8G8R8A8_SRGB && // choose SRGB color format
+			availableFormat.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) // choose SRGB color space if possible
 		{
 			return availableFormat;
 		}
@@ -1069,9 +1084,9 @@ VkSurfaceFormatKHR HelloTriangleApplication::chooseSwapSurfaceFormat(
 VkPresentModeKHR HelloTriangleApplication::chooseSwapPresentMode(
 	const std::vector<VkPresentModeKHR>& availablePresentModes)
 {
-	// choose "triple buffering" if possible
 	for (const auto& availablePresentMode : availablePresentModes)
 	{
+		// choose "triple buffering" if possible
 		if (availablePresentMode == VK_PRESENT_MODE_MAILBOX_KHR)
 		{
 			return availablePresentMode;

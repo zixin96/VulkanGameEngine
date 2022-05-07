@@ -10,7 +10,9 @@
 // this struct represents all the queue families we need
 struct QueueFamilyIndices
 {
+	// these uint32_t represent indices into the array of queue families
 	// C++17 std::optional: graphicsFamily has "no value" until you assign a value to it
+
 	std::optional<uint32_t> graphicsFamily;
 	std::optional<uint32_t> presentFamily;
 
@@ -56,18 +58,10 @@ private:
 private:
 	void pickPhysicalDevice();
 	int rateDeviceSuitability(VkPhysicalDevice device);
-	// look for all the queue families we need
 	QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device);
-
-	// query what features do our swap chain support
 	SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice device);
-
-	// the following 3 functions choose the right settings for the swap chain
-	// color depth
 	VkSurfaceFormatKHR chooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats);
-	// conditions for "swapping" images to the screen
 	VkPresentModeKHR chooseSwapPresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes);
-	// resolution of images in swap chain
 	VkExtent2D chooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities);
 
 	// return true if all extensions specified in deviceExtensions are supported by the physical device
@@ -121,7 +115,6 @@ private:
 	VkDebugUtilsMessengerEXT debugMessenger;
 	VkSurfaceKHR surface;
 	VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
-	// logical device is used to interface with the physical device
 	VkDevice device;
 	VkQueue graphicsQueue;
 	VkQueue presentQueue;

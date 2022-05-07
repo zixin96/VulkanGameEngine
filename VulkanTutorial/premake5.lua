@@ -1,7 +1,7 @@
 project "VulkanTutorial"
 	kind "ConsoleApp"
 	language "C++"
-	cppdialect "C++17"
+	cppdialect "C++20"
 	staticruntime "off"
 	
 	targetdir ("../bin/" .. outputdir .. "/%{prj.name}")
@@ -32,6 +32,9 @@ project "VulkanTutorial"
 	filter "system:windows"
 		systemversion "latest"
 
+	prebuildcommands {
+		"assets/shaders/compile.bat"
+	}
 
 	filter "configurations:Debug"
 		defines "GLCORE_DEBUG"
