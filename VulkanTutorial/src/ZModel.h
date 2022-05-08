@@ -12,7 +12,7 @@ namespace ZZX
 	public:
 		struct Vertex
 		{
-			glm::vec2 pos;
+			glm::vec3 pos;
 			glm::vec3 color;
 
 			static std::vector<VkVertexInputBindingDescription> getBindingDescriptions();
@@ -25,6 +25,7 @@ namespace ZZX
 		// delete copy ctor and assignment to avoid dangling pointer
 		ZModel(const ZModel&);
 		ZModel& operator=(const ZModel&);
+
 		void bind(VkCommandBuffer commandBuffer);
 		void draw(VkCommandBuffer commandBuffer);
 	private:

@@ -3,6 +3,7 @@
 #include "ZDevice.h"
 #include "ZGameObject.h"
 #include "ZPipeline.h"
+#include "ZCamera.h"
 
 // std
 #include <memory>
@@ -19,7 +20,9 @@ namespace ZZX
 		// delete copy ctor and assignment to avoid dangling pointer
 		SimpleRenderSystem(const SimpleRenderSystem&) = delete;
 		SimpleRenderSystem& operator=(const SimpleRenderSystem&) = delete;
-		void renderGameObjects(VkCommandBuffer commandBuffer, std::vector<ZGameObject>& gameObjects);
+		void renderGameObjects(VkCommandBuffer commandBuffer,
+		                       std::vector<ZGameObject>& gameObjects,
+		                       const ZCamera& camera);
 	private:
 		void createPipelineLayout();
 		void createPipeline(VkRenderPass renderPass);

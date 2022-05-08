@@ -19,13 +19,13 @@ namespace ZZX
 		attributeDescriptions[0] = {
 			.location = 0,
 			.binding = 0,
-			.format = VK_FORMAT_R32G32_SFLOAT,
+			.format = VK_FORMAT_R32G32B32_SFLOAT, // Vertex::pos
 			.offset = offsetof(Vertex, pos),
 		};
 		attributeDescriptions[1] = {
 			.location = 1,
 			.binding = 0,
-			.format = VK_FORMAT_R32G32B32_SFLOAT,
+			.format = VK_FORMAT_R32G32B32_SFLOAT, // Vertex::color
 			.offset = offsetof(Vertex, color),
 		};
 		return attributeDescriptions;

@@ -10,6 +10,8 @@
 #include <glm/gtc/constants.hpp>
 
 #include "SimpleRenderSystem.h"
+#include "ZCamera.h"
+
 
 namespace ZZX
 {
@@ -25,13 +27,17 @@ namespace ZZX
 	void FirstApp::run()
 	{
 		SimpleRenderSystem simpleRenderSystem{m_zDevice, m_zRenderer.getSwapChainRenderPass()};
+		ZCamera camera{};
 		while (!m_zWindow.shouldClose())
 		{
 			glfwPollEvents();
+			float aspect = m_zRenderer.getAspectRatio();
+			// camera.setOrthographicProjection(-aspect, aspect, -1.f, 1.f, -1.f, 1.f);
+			camera.setPerspectiveProjection(glm::radians(50.f), aspect, 0.1f, 10.f);
 			if (auto commandBuffer = m_zRenderer.beginFrame())
 			{
 				m_zRenderer.beginSwapChainRenderPass(commandBuffer);
-				simpleRenderSystem.renderGameObjects(commandBuffer, m_gameObjects);
+				simpleRenderSystem.renderGameObjects(commandBuffer, m_gameObjects, camera);
 				m_zRenderer.endSwapChainRenderPass(commandBuffer);
 				m_zRenderer.endFrame();
 			}
@@ -40,37 +46,74 @@ namespace ZZX
 		vkDeviceWaitIdle(m_zDevice.device());
 	}
 
-	void FirstApp::loadGameObjects()
+	// temporary helper function, creates a 1x1x1 cube centered at offset
+	std::unique_ptr<ZModel> createCubeModel(ZDevice& device, glm::vec3 offset)
 	{
 		std::vector<ZModel::Vertex> vertices{
-			{{0.0f, -0.5f}, {1.0f, 0.0f, 0.0f}},
-			{{0.5f, 0.5f}, {0.0f, 1.0f, 0.0f}},
-			{{-0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}}
-		};
-		// shared_ptr allows us to have one model instance to be used by multiple game objects
-		// , which will stay in the memory as long as there is at least one game object using it
-		auto lveModel = std::make_shared<ZModel>(m_zDevice, vertices);
 
-		// https://www.color-hex.com/color-palette/5361
-		std::vector<glm::vec3> colors{
-			{1.f, .7f, .73f},
-			{1.f, .87f, .73f},
-			{1.f, 1.f, .73f},
-			{.73f, 1.f, .8f},
-			{.73, .88f, 1.f} //
+			// left face (white)
+			{{-.5f, -.5f, -.5f}, {.9f, .9f, .9f}},
+			{{-.5f, .5f, .5f}, {.9f, .9f, .9f}},
+			{{-.5f, -.5f, .5f}, {.9f, .9f, .9f}},
+			{{-.5f, -.5f, -.5f}, {.9f, .9f, .9f}},
+			{{-.5f, .5f, -.5f}, {.9f, .9f, .9f}},
+			{{-.5f, .5f, .5f}, {.9f, .9f, .9f}},
+
+			// right face (yellow)
+			{{.5f, -.5f, -.5f}, {.8f, .8f, .1f}},
+			{{.5f, .5f, .5f}, {.8f, .8f, .1f}},
+			{{.5f, -.5f, .5f}, {.8f, .8f, .1f}},
+			{{.5f, -.5f, -.5f}, {.8f, .8f, .1f}},
+			{{.5f, .5f, -.5f}, {.8f, .8f, .1f}},
+			{{.5f, .5f, .5f}, {.8f, .8f, .1f}},
+
+			// top face (orange, remember y axis points down)
+			{{-.5f, -.5f, -.5f}, {.9f, .6f, .1f}},
+			{{.5f, -.5f, .5f}, {.9f, .6f, .1f}},
+			{{-.5f, -.5f, .5f}, {.9f, .6f, .1f}},
+			{{-.5f, -.5f, -.5f}, {.9f, .6f, .1f}},
+			{{.5f, -.5f, -.5f}, {.9f, .6f, .1f}},
+			{{.5f, -.5f, .5f}, {.9f, .6f, .1f}},
+
+			// bottom face (red)
+			{{-.5f, .5f, -.5f}, {.8f, .1f, .1f}},
+			{{.5f, .5f, .5f}, {.8f, .1f, .1f}},
+			{{-.5f, .5f, .5f}, {.8f, .1f, .1f}},
+			{{-.5f, .5f, -.5f}, {.8f, .1f, .1f}},
+			{{.5f, .5f, -.5f}, {.8f, .1f, .1f}},
+			{{.5f, .5f, .5f}, {.8f, .1f, .1f}},
+
+			// nose face (blue)
+			{{-.5f, -.5f, 0.5f}, {.1f, .1f, .8f}},
+			{{.5f, .5f, 0.5f}, {.1f, .1f, .8f}},
+			{{-.5f, .5f, 0.5f}, {.1f, .1f, .8f}},
+			{{-.5f, -.5f, 0.5f}, {.1f, .1f, .8f}},
+			{{.5f, -.5f, 0.5f}, {.1f, .1f, .8f}},
+			{{.5f, .5f, 0.5f}, {.1f, .1f, .8f}},
+
+			// tail face (green)
+			{{-.5f, -.5f, -0.5f}, {.1f, .8f, .1f}},
+			{{.5f, .5f, -0.5f}, {.1f, .8f, .1f}},
+			{{-.5f, .5f, -0.5f}, {.1f, .8f, .1f}},
+			{{-.5f, -.5f, -0.5f}, {.1f, .8f, .1f}},
+			{{.5f, -.5f, -0.5f}, {.1f, .8f, .1f}},
+			{{.5f, .5f, -0.5f}, {.1f, .8f, .1f}},
+
 		};
-		for (auto& color : colors)
+		for (auto& v : vertices)
 		{
-			color = glm::pow(color, glm::vec3{2.2f});
+			v.pos += offset;
 		}
-		for (int i = 0; i < 40; i++)
-		{
-			auto triangle = ZGameObject::createGameObject();
-			triangle.m_model = lveModel;
-			triangle.m_transform2d.scale = glm::vec2(.5f) + i * 0.025f;
-			triangle.m_transform2d.rotation = i * glm::pi<float>() * .025f;
-			triangle.m_color = colors[i % colors.size()];
-			m_gameObjects.push_back(std::move(triangle));
-		}
+		return std::make_unique<ZModel>(device, vertices);
+	}
+
+	void FirstApp::loadGameObjects()
+	{
+		std::shared_ptr<ZModel> zModel = createCubeModel(m_zDevice, {0.f, 0.f, 0.f});
+		auto cube = ZGameObject::createGameObject();
+		cube.m_model = zModel;
+		cube.m_transform.translation = {0.f, 0.f, 2.5f};
+		cube.m_transform.scale = {0.5f, 0.5f, .5f};
+		m_gameObjects.push_back(std::move(cube));
 	}
 }

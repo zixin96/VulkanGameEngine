@@ -3,7 +3,6 @@
 #include "ZDevice.h"
 #include "ZWindow.h"
 #include "ZSwapChain.h"
-
 // std
 #include <cassert>
 #include <memory>
@@ -22,6 +21,7 @@ namespace ZZX
 		ZRenderer& operator=(const ZRenderer&) = delete;
 
 		VkRenderPass getSwapChainRenderPass() const { return m_zSwapChain->getRenderPass(); }
+		float getAspectRatio() const { return m_zSwapChain->extentAspectRatio(); }
 		bool isFrameInProgress() const { return m_isFrameStarted; }
 
 		VkCommandBuffer getCurrentCommandBuffer() const

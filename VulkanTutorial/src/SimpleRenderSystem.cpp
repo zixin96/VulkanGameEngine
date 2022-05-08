@@ -11,11 +11,9 @@
 
 namespace ZZX
 {
-	// TODO: we temporarily put push constant data in the app class
 	struct SimplePushConstantData
 	{
-		glm::mat2 transform{ 1.f };
-		glm::vec2 offset;
+		glm::mat4 transform{1.f};
 		alignas(16) glm::vec3 color;
 	};
 
@@ -49,9 +47,9 @@ namespace ZZX
 		};
 
 		if (vkCreatePipelineLayout(m_zDevice.device(),
-			&pipelineLayoutInfo,
-			nullptr,
-			&m_pipelineLayout) != VK_SUCCESS)
+		                           &pipelineLayoutInfo,
+		                           nullptr,
+		                           &m_pipelineLayout) != VK_SUCCESS)
 		{
 			throw std::runtime_error("failed to create pipeline layout!");
 		}
@@ -66,38 +64,33 @@ namespace ZZX
 		pipelineConfig.renderPass = renderPass;
 		pipelineConfig.pipelineLayout = m_pipelineLayout;
 		m_zPipeline = std::make_unique<ZPipeline>(m_zDevice,
-			pipelineConfig,
-			"assets/shaders/simple_shader.vert.spv",
-			"assets/shaders/simple_shader.frag.spv"
-			);
+		                                          pipelineConfig,
+		                                          "assets/shaders/simple_shader.vert.spv",
+		                                          "assets/shaders/simple_shader.frag.spv"
+		);
 	}
 
 
-	void SimpleRenderSystem::renderGameObjects(VkCommandBuffer commandBuffer, std::vector<ZGameObject>& gameObjects)
+	void SimpleRenderSystem::renderGameObjects(VkCommandBuffer commandBuffer,
+	                                           std::vector<ZGameObject>& gameObjects,
+	                                           const ZCamera& camera)
 	{
-		// update
-		int i = 0;
-		for (auto& obj : gameObjects)
-		{
-			i += 1;
-			obj.m_transform2d.rotation =
-				glm::mod<float>(obj.m_transform2d.rotation + 0.0001f * i, 2.f * glm::pi<float>());
-		}
-
 		m_zPipeline->bind(commandBuffer);
 		for (auto& obj : gameObjects)
 		{
+			obj.m_transform.rotation.y = glm::mod(obj.m_transform.rotation.y + 0.01f, glm::two_pi<float>());
+			obj.m_transform.rotation.x = glm::mod(obj.m_transform.rotation.x + 0.005f, glm::two_pi<float>());
+
 			SimplePushConstantData push{
-				.transform = obj.m_transform2d.mat2(),
-				.offset = obj.m_transform2d.translation,
+				.transform = camera.getProjection() * obj.m_transform.mat4(),
 				.color = obj.m_color,
 			};
 			vkCmdPushConstants(commandBuffer,
-				m_pipelineLayout,
-				VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
-				0,
-				sizeof(SimplePushConstantData),
-				&push);
+			                   m_pipelineLayout,
+			                   VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
+			                   0,
+			                   sizeof(SimplePushConstantData),
+			                   &push);
 			obj.m_model->bind(commandBuffer);
 			obj.m_model->draw(commandBuffer);
 		}
