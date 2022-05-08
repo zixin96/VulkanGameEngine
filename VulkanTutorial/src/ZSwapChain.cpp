@@ -3,11 +3,27 @@
 #include <stdexcept>
 #include <array>
 #include <iostream>
+#include <utility>
 
 namespace ZZX
 {
-	ZSwapChain::ZSwapChain(ZDevice& deviceRef, VkExtent2D extent)
-		: m_zDevice{deviceRef}, m_windowExtent{extent}
+	ZSwapChain::ZSwapChain(ZDevice& deviceRef, VkExtent2D windowExtent)
+		: m_zDevice{deviceRef}, m_windowExtent{windowExtent}
+	{
+		init();
+	}
+
+	ZSwapChain::ZSwapChain(ZDevice& deviceRef, VkExtent2D windowExtent, std::shared_ptr<ZSwapChain> previous)
+		: m_zDevice{deviceRef}, m_windowExtent{windowExtent}, m_oldSwapChain{std::move(previous)}
+	{
+		init();
+
+		// we will only use the old swap chain during init(), thus after init() it's no longer needed
+		// clean up old swap chain since it's no longer needed
+		m_oldSwapChain = nullptr;
+	}
+
+	void ZSwapChain::init()
 	{
 		createSwapChain();
 		createImageViews();
@@ -185,7 +201,7 @@ namespace ZZX
 		createInfo.presentMode = presentMode;
 		createInfo.clipped = VK_TRUE;
 
-		createInfo.oldSwapchain = VK_NULL_HANDLE;
+		createInfo.oldSwapchain = m_oldSwapChain == nullptr ? VK_NULL_HANDLE : m_oldSwapChain->m_swapChain;
 
 		if (vkCreateSwapchainKHR(m_zDevice.device(), &createInfo, nullptr, &m_swapChain) != VK_SUCCESS)
 		{

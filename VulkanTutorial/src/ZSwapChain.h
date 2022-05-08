@@ -1,6 +1,7 @@
 ﻿#pragma once
 #include "ZDevice.h"
 
+#include <memory>
 namespace ZZX
 {
 	class ZSwapChain
@@ -10,10 +11,11 @@ namespace ZZX
 		static constexpr int MAX_FRAMES_IN_FLIGHT = 2;
 
 		ZSwapChain(ZDevice& deviceRef, VkExtent2D windowExtent);
+		ZSwapChain(ZDevice& deviceRef, VkExtent2D windowExtent, std::shared_ptr<ZSwapChain> previous);
 		~ZSwapChain();
 
 		ZSwapChain(const ZSwapChain&) = delete;
-		void operator=(const ZSwapChain&) = delete;
+		ZSwapChain& operator=(const ZSwapChain&) = delete;
 
 		VkFramebuffer getFrameBuffer(int index) { return m_swapChainFramebuffers[index]; }
 		VkRenderPass getRenderPass() { return m_renderPass; }
@@ -40,6 +42,7 @@ namespace ZZX
 		VkResult submitCommandBuffers(const VkCommandBuffer* buffers, uint32_t* imageIndex);
 
 	private:
+		void init();
 		void createSwapChain();
 		void createImageViews();
 		void createDepthResources();
@@ -68,6 +71,10 @@ namespace ZZX
 		VkExtent2D m_windowExtent;
 
 		VkSwapchainKHR m_swapChain;
+
+		// keep track of the old swap chain for better resizing behavior
+		// (since resources can be reused when you provide the old swap chain when creating a new one)
+		std::shared_ptr<ZSwapChain> m_oldSwapChain;
 
 		// signal that an image has been acquired from the swapchain and is ready for rendering
 		std::vector<VkSemaphore> m_imageAvailableSemaphores;

@@ -19,13 +19,22 @@ namespace ZZX
 
 		bool shouldClose() { return glfwWindowShouldClose(m_window); }
 		VkExtent2D getExtent() { return {static_cast<uint32_t>(m_width), static_cast<uint32_t>(m_height)}; }
+		bool wasWindowResized() { return m_framebufferResized; }
+		void resetWindowResizedFlag() { m_framebufferResized = false; }
 
 		void createWindowSurface(VkInstance instance, VkSurfaceKHR* surface);
 	private:
 		void initWindow();
+		// this function will be called when the window is resized by the user
+		static void framebufferResizeCallback(GLFWwindow* window, int width, int height);
 
-		const int m_width;
-		const int m_height;
+		// window's dimension (changeable)
+		int m_width;
+		int m_height;
+
+		// a flag to signal the window size is changed
+		bool m_framebufferResized = false;
+
 		std::string m_name;
 		GLFWwindow* m_window;
 	};

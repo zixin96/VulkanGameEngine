@@ -15,14 +15,14 @@ namespace ZZX
 		PipelineConfigInfo& operator=(const PipelineConfigInfo&) = delete;
 
 		VkPipelineInputAssemblyStateCreateInfo inputAssemblyInfo;
-		VkViewport viewport;
-		VkRect2D scissor;
 		VkPipelineViewportStateCreateInfo viewportInfo;
 		VkPipelineRasterizationStateCreateInfo rasterizationInfo;
 		VkPipelineMultisampleStateCreateInfo multisampleInfo;
 		VkPipelineColorBlendAttachmentState colorBlendAttachment;
 		VkPipelineColorBlendStateCreateInfo colorBlendInfo;
 		VkPipelineDepthStencilStateCreateInfo depthStencilInfo;
+		std::vector<VkDynamicState> dynamicStateEnables;
+		VkPipelineDynamicStateCreateInfo dynamicStateInfo;
 		VkPipelineLayout pipelineLayout = nullptr;
 		VkRenderPass renderPass = nullptr;
 		uint32_t subpass = 0;
@@ -38,10 +38,10 @@ namespace ZZX
 		~ZPipeline();
 
 		ZPipeline(const ZPipeline&) = delete;
-		void operator=(const ZPipeline&) = delete;
+		ZPipeline& operator=(const ZPipeline&) = delete;
 
 		void bind(VkCommandBuffer commandBuffer);
-		static void defaultPipelineConfigInfo(PipelineConfigInfo& configInfo, uint32_t width, uint32_t height);
+		static void defaultPipelineConfigInfo(PipelineConfigInfo& configInfo);
 	private:
 		// read all of the bytes from the specified file and return them in a byte array
 		static std::vector<char> readFile(const std::string& filepath);

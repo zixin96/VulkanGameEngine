@@ -27,34 +27,20 @@ namespace ZZX
 		vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_graphicsPipeline);
 	}
 
-	void ZPipeline::defaultPipelineConfigInfo(PipelineConfigInfo& configInfo, uint32_t width, uint32_t height)
+	void ZPipeline::defaultPipelineConfigInfo(PipelineConfigInfo& configInfo)
 	{
 		configInfo.inputAssemblyInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
 		// "triangle from every 3 vertices without reuse"
 		configInfo.inputAssemblyInfo.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
 		configInfo.inputAssemblyInfo.primitiveRestartEnable = VK_FALSE;
 
-		// describes the viewport transformation from NDC to pixel space
-		// "squishing/squashing" the triangles
-		configInfo.viewport.x = 0.0f;
-		configInfo.viewport.y = 0.0f;
-		configInfo.viewport.width = static_cast<float>(width);
-		configInfo.viewport.height = static_cast<float>(height);
-		// specify the range of depth values to use for the framebuffer
-		configInfo.viewport.minDepth = 0.0f;
-		configInfo.viewport.maxDepth = 1.0f;
-
-		// define in which regions pixels will actually be stored
-		// Any pixels outside the scissor rectangles will be discarded by the rasterizer
-		// "cut" the triangle
-		configInfo.scissor.offset = {0, 0};
-		configInfo.scissor.extent = {width, height};
-
 		configInfo.viewportInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
 		configInfo.viewportInfo.viewportCount = 1;
-		configInfo.viewportInfo.pViewports = &configInfo.viewport;
+		// nullptr here b/c we're using dynamic viewports
+		configInfo.viewportInfo.pViewports = nullptr; 
 		configInfo.viewportInfo.scissorCount = 1;
-		configInfo.viewportInfo.pScissors = &configInfo.scissor;
+		// nullptr here b/c we're using dynamic scissors
+		configInfo.viewportInfo.pScissors = nullptr; 
 
 		configInfo.rasterizationInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
 		configInfo.rasterizationInfo.depthClampEnable = VK_FALSE;
@@ -114,6 +100,14 @@ namespace ZZX
 		configInfo.depthStencilInfo.back = {}; // optional
 		configInfo.depthStencilInfo.minDepthBounds = 0.0f; // optional
 		configInfo.depthStencilInfo.maxDepthBounds = 1.0f; // optional
+
+		// dynamic state: configure the pipeline to expect dynamic viewport/scissor to be provided later
+		configInfo.dynamicStateEnables = {VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR};
+		configInfo.dynamicStateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
+		configInfo.dynamicStateInfo.pDynamicStates = configInfo.dynamicStateEnables.data();
+		configInfo.dynamicStateInfo.dynamicStateCount =
+			static_cast<uint32_t>(configInfo.dynamicStateEnables.size());
+		configInfo.dynamicStateInfo.flags = 0;
 	}
 
 	std::vector<char> ZPipeline::readFile(const std::string& filepath)
@@ -154,12 +148,8 @@ namespace ZZX
 		auto vertShaderCode = readFile(vertFilepath);
 		auto fragShaderCode = readFile(fragFilepath);
 
-		/*std::cout << "Vertex shader code size: " << vertShaderCode.size() << '\n';
-		std::cout << "Fragment shader code size: " << fragShaderCode.size() << '\n';*/
-
 		createShaderModule(vertShaderCode, &m_vertShaderModule);
 		createShaderModule(fragShaderCode, &m_fragShaderModule);
-
 
 		VkPipelineShaderStageCreateInfo vertShaderStageInfo{
 			.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
@@ -185,25 +175,11 @@ namespace ZZX
 
 		VkPipelineVertexInputStateCreateInfo vertexInputInfo{
 			.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
-			 .vertexBindingDescriptionCount = static_cast<uint32_t>(bindingDescriptions.size()),
-			 .pVertexBindingDescriptions = bindingDescriptions.data(),
-			 .vertexAttributeDescriptionCount = static_cast<uint32_t>(attributeDescriptions.size()),
-			 .pVertexAttributeDescriptions = attributeDescriptions.data(),
+			.vertexBindingDescriptionCount = static_cast<uint32_t>(bindingDescriptions.size()),
+			.pVertexBindingDescriptions = bindingDescriptions.data(),
+			.vertexAttributeDescriptionCount = static_cast<uint32_t>(attributeDescriptions.size()),
+			.pVertexAttributeDescriptions = attributeDescriptions.data(),
 		};
-
-
-		// Pipeline layout (uniforms)
-		/*VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
-		pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-		pipelineLayoutInfo.setLayoutCount = 1;
-		pipelineLayoutInfo.pSetLayouts = &descriptorSetLayout;
-		pipelineLayoutInfo.pushConstantRangeCount = 0; // Optional
-		pipelineLayoutInfo.pPushConstantRanges = nullptr; // Optional
-
-		if (vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr, &pipelineLayout) != VK_SUCCESS)
-		{
-			throw std::runtime_error("failed to create pipeline layout!");
-		}*/
 
 		// create graphics pipeline
 		VkGraphicsPipelineCreateInfo pipelineInfo{
@@ -217,7 +193,7 @@ namespace ZZX
 			.pMultisampleState = &config_info.multisampleInfo,
 			.pDepthStencilState = &config_info.depthStencilInfo,
 			.pColorBlendState = &config_info.colorBlendInfo,
-			.pDynamicState = nullptr, // Optional
+			.pDynamicState = &config_info.dynamicStateInfo, // dynamic viewport/scissor
 			.layout = config_info.pipelineLayout,
 			.renderPass = config_info.renderPass,
 			.subpass = config_info.subpass,

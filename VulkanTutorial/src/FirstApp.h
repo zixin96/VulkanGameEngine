@@ -25,7 +25,6 @@ namespace ZZX
 		void run();
 
 	private:
-		// for passing uniforms
 		void loadModels();
 		void sierpinski(std::vector<ZModel::Vertex>& vertices,
 		                int depth,
@@ -34,12 +33,25 @@ namespace ZZX
 		                glm::vec2 top);
 		void createPipelineLayout();
 		void createPipeline();
+
+		// this function is only responsible for command buffers allocation
 		void createCommandBuffers();
+
+		void freeCommandBuffers();
 		void drawFrame();
+		void recreateSwapChain();
+
+		// this function records the command buffer every frame for the swap chain image indicated by imageIndex
+		void recordCommandBuffer(int imageIndex);
 
 		ZWindow m_zWindow{WIDTH, HEIGHT, "Vulkan Renderer"};
 		ZDevice m_zDevice{m_zWindow};
-		ZSwapChain m_zSwapChain{m_zDevice, m_zWindow.getExtent()};
+
+		// by using a unique pointer to the swap chain,
+		// we can create a new swap chain with updated info (such as width and height)
+		// by simply creating a new swap chain object
+		std::unique_ptr<ZSwapChain> m_zSwapChain;
+
 		std::unique_ptr<ZPipeline> m_zPipeline;
 		VkPipelineLayout m_pipelineLayout;
 		std::vector<VkCommandBuffer> m_commandBuffers;
