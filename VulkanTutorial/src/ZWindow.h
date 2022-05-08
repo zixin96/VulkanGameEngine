@@ -21,7 +21,7 @@ namespace ZZX
 		VkExtent2D getExtent() { return {static_cast<uint32_t>(m_width), static_cast<uint32_t>(m_height)}; }
 		bool wasWindowResized() { return m_framebufferResized; }
 		void resetWindowResizedFlag() { m_framebufferResized = false; }
-
+		GLFWwindow* getGLFWWindow() const { return m_window; }
 		void createWindowSurface(VkInstance instance, VkSurfaceKHR* surface);
 	private:
 		void initWindow();
