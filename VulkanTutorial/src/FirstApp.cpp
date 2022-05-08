@@ -3,8 +3,20 @@
 #include <stdexcept>
 #include <array>
 
+// libs
+#define GLM_FORCE_RADIANS
+#define GLM_FORCE_DEPTH_ZERO_TO_ONE
+#include <glm/glm.hpp>
+
 namespace ZZX
 {
+	// TODO: we temporarily put push constant data in the app class
+	struct SimplePushConstantData
+	{
+		glm::vec2 offset;
+		alignas(16) glm::vec3 color;
+	};
+
 	FirstApp::FirstApp()
 	{
 		loadModels();
@@ -66,12 +78,19 @@ namespace ZZX
 
 	void FirstApp::createPipelineLayout()
 	{
+		VkPushConstantRange pushConstantRange{
+			// both vert/frag shaders can access push constants
+			.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
+			.offset = 0,
+			.size = sizeof(SimplePushConstantData)
+		};
+
 		VkPipelineLayoutCreateInfo pipelineLayoutInfo{
 			.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
 			.setLayoutCount = 0,
 			.pSetLayouts = nullptr,
-			.pushConstantRangeCount = 0, // Optional
-			.pPushConstantRanges = nullptr, // Optional
+			.pushConstantRangeCount = 1,
+			.pPushConstantRanges = &pushConstantRange,
 		};
 
 		if (vkCreatePipelineLayout(m_zDevice.device(),
@@ -204,6 +223,10 @@ namespace ZZX
 
 	void FirstApp::recordCommandBuffer(int imageIndex)
 	{
+		static int frame = 0;
+		// animation will loop every 1000 frames
+		frame = (frame + 1) % 10000;
+
 		VkCommandBufferBeginInfo beginInfo{
 			.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
 			.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
@@ -216,7 +239,7 @@ namespace ZZX
 
 		// Starting a render pass
 		std::array<VkClearValue, 2> clearValues{};
-		clearValues[0].color = {0.1f, 0.1f, 0.1f, 1.0f};
+		clearValues[0].color = {0.01f, 0.01f, 0.01f, 1.0f};
 		clearValues[1].depthStencil = {1.0f, 0};
 
 		VkRenderPassBeginInfo renderPassInfo{
@@ -256,7 +279,20 @@ namespace ZZX
 
 		m_zPipeline->bind(m_commandBuffers[imageIndex]);
 		m_zModel->bind(m_commandBuffers[imageIndex]);
-		m_zModel->draw(m_commandBuffers[imageIndex]);
+		for (int j = 0; j < 4; j++)
+		{
+			SimplePushConstantData push{
+				.offset = {-0.5f + frame * 0.0002f, -0.4f + j * 0.25f},
+				.color = {0.0f, 0.0f, 0.2f + 0.2f * j},
+			};
+			vkCmdPushConstants(m_commandBuffers[imageIndex],
+			                   m_pipelineLayout,
+			                   VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
+			                   0,
+			                   sizeof(SimplePushConstantData),
+			                   &push);
+			m_zModel->draw(m_commandBuffers[imageIndex]);
+		}
 
 		vkCmdEndRenderPass(m_commandBuffers[imageIndex]);
 
