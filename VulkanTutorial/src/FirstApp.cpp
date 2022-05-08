@@ -28,6 +28,9 @@ namespace ZZX
 	{
 		SimpleRenderSystem simpleRenderSystem{m_zDevice, m_zRenderer.getSwapChainRenderPass()};
 		ZCamera camera{};
+		// camera.setViewDirection(glm::vec3{ 0.f }, glm::vec3{ 0.5f, 0.f, 1.f });
+		camera.setViewTarget(glm::vec3{-1.f, -2.f, 2.f}, glm::vec3{0.0f, 0.f, 2.5f});
+
 		while (!m_zWindow.shouldClose())
 		{
 			glfwPollEvents();

@@ -76,13 +76,16 @@ namespace ZZX
 	                                           const ZCamera& camera)
 	{
 		m_zPipeline->bind(commandBuffer);
+
+		auto projectionView = camera.getProjection() * camera.getView();
+
 		for (auto& obj : gameObjects)
 		{
 			obj.m_transform.rotation.y = glm::mod(obj.m_transform.rotation.y + 0.01f, glm::two_pi<float>());
 			obj.m_transform.rotation.x = glm::mod(obj.m_transform.rotation.x + 0.005f, glm::two_pi<float>());
 
 			SimplePushConstantData push{
-				.transform = camera.getProjection() * obj.m_transform.mat4(),
+				.transform = projectionView * obj.m_transform.mat4(),
 				.color = obj.m_color,
 			};
 			vkCmdPushConstants(commandBuffer,
