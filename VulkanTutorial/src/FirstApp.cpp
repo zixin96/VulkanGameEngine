@@ -7,19 +7,21 @@
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #include <glm/glm.hpp>
+#include <glm/gtc/constants.hpp>
 
 namespace ZZX
 {
 	// TODO: we temporarily put push constant data in the app class
 	struct SimplePushConstantData
 	{
+		glm::mat2 transform{1.f};
 		glm::vec2 offset;
 		alignas(16) glm::vec3 color;
 	};
 
 	FirstApp::FirstApp()
 	{
-		loadModels();
+		loadGameObjects();
 		createPipelineLayout();
 		recreateSwapChain();
 		createCommandBuffers();
@@ -41,16 +43,38 @@ namespace ZZX
 		vkDeviceWaitIdle(m_zDevice.device());
 	}
 
-	void FirstApp::loadModels()
+	void FirstApp::loadGameObjects()
 	{
-		/*std::vector<ZModel::Vertex> vertices{};
-		sierpinski(vertices, 5, {-0.5f, 0.5f}, {0.5f, 0.5f}, {0.0f, -0.5f});*/
 		std::vector<ZModel::Vertex> vertices{
-			{{0.0, -0.5}, {1.f, 0.f, 0.f}},
-			{{-0.5, 0.5}, {0.f, 1.f, 0.f}},
-			{{0.5, 0.5}, {0.f, 0.f, 1.f}},
+			{{0.0f, -0.5f}, {1.0f, 0.0f, 0.0f}},
+			{{0.5f, 0.5f}, {0.0f, 1.0f, 0.0f}},
+			{{-0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}}
 		};
-		m_zModel = std::make_unique<ZModel>(m_zDevice, vertices);
+		// shared_ptr allows us to have one model instance to be used by multiple game objects
+		// , which will stay in the memory as long as there is at least one game object using it
+		auto lveModel = std::make_shared<ZModel>(m_zDevice, vertices);
+
+		// https://www.color-hex.com/color-palette/5361
+		std::vector<glm::vec3> colors{
+			{1.f, .7f, .73f},
+			{1.f, .87f, .73f},
+			{1.f, 1.f, .73f},
+			{.73f, 1.f, .8f},
+			{.73, .88f, 1.f} //
+		};
+		for (auto& color : colors)
+		{
+			color = glm::pow(color, glm::vec3{2.2f});
+		}
+		for (int i = 0; i < 40; i++)
+		{
+			auto triangle = ZGameObject::createGameObject();
+			triangle.m_model = lveModel;
+			triangle.m_transform2d.scale = glm::vec2(.5f) + i * 0.025f;
+			triangle.m_transform2d.rotation = i * glm::pi<float>() * .025f;
+			triangle.m_color = colors[i % colors.size()];
+			m_gameObjects.push_back(std::move(triangle));
+		}
 	}
 
 	void FirstApp::sierpinski(std::vector<ZModel::Vertex>& vertices,
@@ -223,10 +247,6 @@ namespace ZZX
 
 	void FirstApp::recordCommandBuffer(int imageIndex)
 	{
-		static int frame = 0;
-		// animation will loop every 1000 frames
-		frame = (frame + 1) % 10000;
-
 		VkCommandBufferBeginInfo beginInfo{
 			.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
 			.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
@@ -277,28 +297,43 @@ namespace ZZX
 		vkCmdSetViewport(m_commandBuffers[imageIndex], 0, 1, &viewport);
 		vkCmdSetScissor(m_commandBuffers[imageIndex], 0, 1, &scissor);
 
-		m_zPipeline->bind(m_commandBuffers[imageIndex]);
-		m_zModel->bind(m_commandBuffers[imageIndex]);
-		for (int j = 0; j < 4; j++)
-		{
-			SimplePushConstantData push{
-				.offset = {-0.5f + frame * 0.0002f, -0.4f + j * 0.25f},
-				.color = {0.0f, 0.0f, 0.2f + 0.2f * j},
-			};
-			vkCmdPushConstants(m_commandBuffers[imageIndex],
-			                   m_pipelineLayout,
-			                   VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
-			                   0,
-			                   sizeof(SimplePushConstantData),
-			                   &push);
-			m_zModel->draw(m_commandBuffers[imageIndex]);
-		}
+		renderGameObjects(m_commandBuffers[imageIndex]);
 
 		vkCmdEndRenderPass(m_commandBuffers[imageIndex]);
 
 		if (vkEndCommandBuffer(m_commandBuffers[imageIndex]) != VK_SUCCESS)
 		{
 			throw std::runtime_error("failed to end recording command buffers!");
+		}
+	}
+
+	void FirstApp::renderGameObjects(VkCommandBuffer commandBuffer)
+	{
+		// update
+		int i = 0;
+		for (auto& obj : m_gameObjects)
+		{
+			i += 1;
+			obj.m_transform2d.rotation =
+				glm::mod<float>(obj.m_transform2d.rotation + 0.0001f * i, 2.f * glm::pi<float>());
+		}
+
+		m_zPipeline->bind(commandBuffer);
+		for (auto& obj : m_gameObjects)
+		{
+			SimplePushConstantData push{
+				.transform = obj.m_transform2d.mat2(),
+				.offset = obj.m_transform2d.translation,
+				.color = obj.m_color,
+			};
+			vkCmdPushConstants(commandBuffer,
+			                   m_pipelineLayout,
+			                   VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
+			                   0,
+			                   sizeof(SimplePushConstantData),
+			                   &push);
+			obj.m_model->bind(commandBuffer);
+			obj.m_model->draw(commandBuffer);
 		}
 	}
 }

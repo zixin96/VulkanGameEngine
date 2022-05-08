@@ -3,7 +3,7 @@
 #include "ZWindow.h"
 #include "ZPipeline.h"
 #include "ZSwapChain.h"
-#include "ZModel.h"
+#include "ZGameObject.h"
 
 // std
 #include <memory>
@@ -26,7 +26,7 @@ namespace ZZX
 		void run();
 
 	private:
-		void loadModels();
+		void loadGameObjects();
 		void sierpinski(std::vector<ZModel::Vertex>& vertices,
 		                int depth,
 		                glm::vec2 left,
@@ -45,6 +45,8 @@ namespace ZZX
 		// this function records the command buffer every frame for the swap chain image indicated by imageIndex
 		void recordCommandBuffer(int imageIndex);
 
+		void renderGameObjects(VkCommandBuffer commandBuffer);
+
 		ZWindow m_zWindow{WIDTH, HEIGHT, "Vulkan Renderer"};
 		ZDevice m_zDevice{m_zWindow};
 
@@ -56,6 +58,6 @@ namespace ZZX
 		std::unique_ptr<ZPipeline> m_zPipeline;
 		VkPipelineLayout m_pipelineLayout;
 		std::vector<VkCommandBuffer> m_commandBuffers;
-		std::unique_ptr<ZModel> m_zModel;
+		std::vector<ZGameObject> m_gameObjects;
 	};
 }
