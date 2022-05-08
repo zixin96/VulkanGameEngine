@@ -7,6 +7,7 @@ namespace ZZX
 {
 	FirstApp::FirstApp()
 	{
+		loadModels();
 		createPipelineLayout();
 		createPipeline();
 		createCommandBuffers();
@@ -26,6 +27,41 @@ namespace ZZX
 		}
 		// wait for the logical device to finish operations
 		vkDeviceWaitIdle(m_zDevice.device());
+	}
+
+	void FirstApp::loadModels()
+	{
+		std::vector<ZModel::Vertex> vertices{};
+		sierpinski(vertices, 5, {-0.5f, 0.5f}, {0.5f, 0.5f}, {0.0f, -0.5f});
+		/*std::vector<ZModel::Vertex> vertices{
+			{{0.0, -0.5}},
+			{{-0.5, 0.5}},
+			{{0.5, 0.5}},
+		};*/
+		m_zModel = std::make_unique<ZModel>(m_zDevice, vertices);
+	}
+
+	void FirstApp::sierpinski(std::vector<ZModel::Vertex>& vertices,
+	                          int depth,
+	                          glm::vec2 left,
+	                          glm::vec2 right,
+	                          glm::vec2 top)
+	{
+		if (depth <= 0)
+		{
+			vertices.push_back({top});
+			vertices.push_back({right});
+			vertices.push_back({left});
+		}
+		else
+		{
+			auto leftTop = 0.5f * (left + top);
+			auto rightTop = 0.5f * (right + top);
+			auto leftRight = 0.5f * (left + right);
+			sierpinski(vertices, depth - 1, left, leftRight, leftTop);
+			sierpinski(vertices, depth - 1, leftRight, right, rightTop);
+			sierpinski(vertices, depth - 1, leftTop, rightTop, top);
+		}
 	}
 
 	void FirstApp::createPipelineLayout()
@@ -112,8 +148,11 @@ namespace ZZX
 
 			// The render pass can now begin
 			vkCmdBeginRenderPass(m_commandBuffers[i], &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+
 			m_zPipeline->bind(m_commandBuffers[i]);
-			vkCmdDraw(m_commandBuffers[i], 3, 1, 0, 0);
+			m_zModel->bind(m_commandBuffers[i]);
+			m_zModel->draw(m_commandBuffers[i]);
+
 			vkCmdEndRenderPass(m_commandBuffers[i]);
 
 			if (vkEndCommandBuffer(m_commandBuffers[i]) != VK_SUCCESS)

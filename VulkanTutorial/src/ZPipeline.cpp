@@ -60,7 +60,8 @@ namespace ZZX
 		configInfo.rasterizationInfo.depthClampEnable = VK_FALSE;
 		configInfo.rasterizationInfo.rasterizerDiscardEnable = VK_FALSE;
 		configInfo.rasterizationInfo.polygonMode = VK_POLYGON_MODE_FILL;
-		configInfo.rasterizationInfo.cullMode = VK_CULL_MODE_BACK_BIT;
+		// configInfo.rasterizationInfo.cullMode = VK_CULL_MODE_BACK_BIT;
+		configInfo.rasterizationInfo.cullMode = VK_CULL_MODE_NONE;
 		configInfo.rasterizationInfo.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
 		configInfo.rasterizationInfo.depthBiasEnable = VK_FALSE;
 		configInfo.rasterizationInfo.depthBiasConstantFactor = 0.0f; // Optional
@@ -179,15 +180,15 @@ namespace ZZX
 
 		// Vertex input stage
 
-		// auto bindingDescription = Vertex::getBindingDescription();
-		// auto attributeDescriptions = Vertex::getAttributeDescriptions();
+		auto bindingDescriptions = ZModel::Vertex::getBindingDescriptions();
+		auto attributeDescriptions = ZModel::Vertex::getAttributeDescriptions();
 
 		VkPipelineVertexInputStateCreateInfo vertexInputInfo{
 			.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
-			// .vertexBindingDescriptionCount = 1,
-			// .pVertexBindingDescriptions = &bindingDescription,
-			// .vertexAttributeDescriptionCount = static_cast<uint32_t>(attributeDescriptions.size()),
-			// .pVertexAttributeDescriptions = attributeDescriptions.data(),
+			 .vertexBindingDescriptionCount = static_cast<uint32_t>(bindingDescriptions.size()),
+			 .pVertexBindingDescriptions = bindingDescriptions.data(),
+			 .vertexAttributeDescriptionCount = static_cast<uint32_t>(attributeDescriptions.size()),
+			 .pVertexAttributeDescriptions = attributeDescriptions.data(),
 		};
 
 

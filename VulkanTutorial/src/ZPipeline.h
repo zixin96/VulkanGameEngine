@@ -1,5 +1,6 @@
 ﻿#pragma once
 #include "ZDevice.h"
+#include "ZModel.h"
 
 #include <string>
 #include <vector>

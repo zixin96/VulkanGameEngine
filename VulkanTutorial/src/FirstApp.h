@@ -5,6 +5,7 @@
 #include "ZWindow.h"
 #include "ZPipeline.h"
 #include "ZSwapChain.h"
+#include "ZModel.h"
 
 namespace ZZX
 {
@@ -24,7 +25,13 @@ namespace ZZX
 		void run();
 
 	private:
-		// for passing uniforms 
+		// for passing uniforms
+		void loadModels();
+		void sierpinski(std::vector<ZModel::Vertex>& vertices,
+		                int depth,
+		                glm::vec2 left,
+		                glm::vec2 right,
+		                glm::vec2 top);
 		void createPipelineLayout();
 		void createPipeline();
 		void createCommandBuffers();
@@ -36,5 +43,6 @@ namespace ZZX
 		std::unique_ptr<ZPipeline> m_zPipeline;
 		VkPipelineLayout m_pipelineLayout;
 		std::vector<VkCommandBuffer> m_commandBuffers;
+		std::unique_ptr<ZModel> m_zModel;
 	};
 }
