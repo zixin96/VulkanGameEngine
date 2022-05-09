@@ -108,6 +108,9 @@ namespace ZZX
 		configInfo.dynamicStateInfo.dynamicStateCount =
 			static_cast<uint32_t>(configInfo.dynamicStateEnables.size());
 		configInfo.dynamicStateInfo.flags = 0;
+
+		configInfo.bindingDescriptions = ZModel::Vertex::getBindingDescriptions();
+		configInfo.attributeDescriptions = ZModel::Vertex::getAttributeDescriptions();
 	}
 
 	std::vector<char> ZPipeline::readFile(const std::string& filepath)
@@ -170,8 +173,8 @@ namespace ZZX
 
 		// Vertex input stage
 
-		auto bindingDescriptions = ZModel::Vertex::getBindingDescriptions();
-		auto attributeDescriptions = ZModel::Vertex::getAttributeDescriptions();
+		auto& bindingDescriptions = config_info.bindingDescriptions;
+		auto& attributeDescriptions = config_info.attributeDescriptions;
 
 		VkPipelineVertexInputStateCreateInfo vertexInputInfo{
 			.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,

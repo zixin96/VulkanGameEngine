@@ -11,6 +11,7 @@ project "VulkanTutorial"
 	{
 		"src/**.h",
 		"src/**.cpp",
+		"vendor/includes/tinyobjloader/tiny_obj_loader.cpp"
 	}
 
 	libdirs
