@@ -88,7 +88,7 @@ namespace ZZX
 			camera.setViewYXZ(viewerObject.m_transform.translation, viewerObject.m_transform.rotation);
 			float aspect = m_zRenderer.getAspectRatio();
 			camera.setPerspectiveProjection(glm::radians(50.f), aspect, 0.1f, 100.f);
-
+			 
 			if (auto commandBuffer = m_zRenderer.beginFrame())
 			{
 				int frameIndex = m_zRenderer.getFrameIndex();
@@ -100,10 +100,11 @@ namespace ZZX
 					globalDescriptorSets[frameIndex],
 					m_gameObjects
 				};
-				// update
+				// update 
 				GlobalUbo ubo{};
 				ubo.projection = camera.getProjection();
 				ubo.view = camera.getView();
+				ubo.inverseView = camera.getInverseView();
 				pointLightSystem.update(frameInfo, ubo);
 				uboBuffers[frameIndex]->writeToBuffer(&ubo);
 				uboBuffers[frameIndex]->flush();

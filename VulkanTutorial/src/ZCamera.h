@@ -16,8 +16,10 @@ namespace ZZX
 		void setViewYXZ(glm::vec3 position, glm::vec3 rotation);
 		const glm::mat4& getProjection() const { return m_projectionMatrix; }
 		const glm::mat4& getView() const { return m_viewMatrix; }
+		const glm::mat4& getInverseView() const { return m_inverseViewMatrix; }
 	private:
 		glm::mat4 m_projectionMatrix{1.f};
 		glm::mat4 m_viewMatrix{1.f};
+		glm::mat4 m_inverseViewMatrix{ 1.f };
 	};
 };
