@@ -2,6 +2,7 @@
 
 #include <stdexcept>
 #include <array>
+#include <map>
 
 // libs
 #define GLM_FORCE_RADIANS
@@ -65,6 +66,7 @@ namespace ZZX
 
 		PipelineConfigInfo pipelineConfig{};
 		ZPipeline::defaultPipelineConfigInfo(pipelineConfig);
+		ZPipeline::enableAlphaBlending(pipelineConfig);
 
 		// we don't want point light system to take the default attribute and binding descriptions
 		pipelineConfig.attributeDescriptions.clear();
@@ -104,6 +106,18 @@ namespace ZZX
 
 	void PointLightSystem::render(FrameInfo& frameInfo)
 	{
+		// sort lights
+		std::map<float, ZGameObject::id_t> sorted;
+		for (auto& kv : frameInfo.gameObjects)
+		{
+			auto& obj = kv.second;
+			if (obj.m_pointLight == nullptr) continue;
+			// calculate distance
+			auto offset = frameInfo.camera.getPosition() - obj.m_transform.translation;
+			float disSquared = glm::dot(offset, offset);
+			sorted[disSquared] = obj.getId();
+		}
+
 		m_zPipeline->bind(frameInfo.commandBuffer);
 		vkCmdBindDescriptorSets(frameInfo.commandBuffer,
 		                        VK_PIPELINE_BIND_POINT_GRAPHICS,
@@ -113,11 +127,11 @@ namespace ZZX
 		                        &frameInfo.globalDescriptorSet,
 		                        0,
 		                        nullptr);
-
-		for (auto& kv : frameInfo.gameObjects)
+		 
+		// iterate through sorted lights in reverse order
+		for (auto it = sorted.rbegin(); it != sorted.rend(); ++it)
 		{
-			auto& obj = kv.second;
-			if (obj.m_pointLight == nullptr) continue;
+			auto& obj = frameInfo.gameObjects.at(it->second);
 			PointLightPushConstants push{};
 			push.position = glm::vec4(obj.m_transform.translation, 1.0f);
 			push.color = glm::vec4(obj.m_color, obj.m_pointLight->lightIntensity);

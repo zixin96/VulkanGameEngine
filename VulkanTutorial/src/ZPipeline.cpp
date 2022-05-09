@@ -37,10 +37,10 @@ namespace ZZX
 		configInfo.viewportInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
 		configInfo.viewportInfo.viewportCount = 1;
 		// nullptr here b/c we're using dynamic viewports
-		configInfo.viewportInfo.pViewports = nullptr; 
+		configInfo.viewportInfo.pViewports = nullptr;
 		configInfo.viewportInfo.scissorCount = 1;
 		// nullptr here b/c we're using dynamic scissors
-		configInfo.viewportInfo.pScissors = nullptr; 
+		configInfo.viewportInfo.pScissors = nullptr;
 
 		configInfo.rasterizationInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
 		configInfo.rasterizationInfo.depthClampEnable = VK_FALSE;
@@ -111,6 +111,23 @@ namespace ZZX
 
 		configInfo.bindingDescriptions = ZModel::Vertex::getBindingDescriptions();
 		configInfo.attributeDescriptions = ZModel::Vertex::getAttributeDescriptions();
+	}
+
+	void ZPipeline::enableAlphaBlending(PipelineConfigInfo& configInfo)
+	{
+		// the per-framebuffer color blending settings
+		configInfo.colorBlendAttachment.blendEnable = VK_TRUE;
+		configInfo.colorBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA; 
+		configInfo.colorBlendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA; 
+		configInfo.colorBlendAttachment.colorBlendOp = VK_BLEND_OP_ADD;
+		configInfo.colorBlendAttachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE; 
+		configInfo.colorBlendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO; 
+		configInfo.colorBlendAttachment.alphaBlendOp = VK_BLEND_OP_ADD;
+		configInfo.colorBlendAttachment.colorWriteMask =
+			VK_COLOR_COMPONENT_R_BIT |
+			VK_COLOR_COMPONENT_G_BIT |
+			VK_COLOR_COMPONENT_B_BIT |
+			VK_COLOR_COMPONENT_A_BIT;
 	}
 
 	std::vector<char> ZPipeline::readFile(const std::string& filepath)

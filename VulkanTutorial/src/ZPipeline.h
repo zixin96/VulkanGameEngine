@@ -44,6 +44,7 @@ namespace ZZX
 
 		void bind(VkCommandBuffer commandBuffer);
 		static void defaultPipelineConfigInfo(PipelineConfigInfo& configInfo);
+		static void enableAlphaBlending(PipelineConfigInfo& configInfo);
 	private:
 		// read all of the bytes from the specified file and return them in a byte array
 		static std::vector<char> readFile(const std::string& filepath);

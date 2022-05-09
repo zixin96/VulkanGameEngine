@@ -111,7 +111,10 @@ namespace ZZX
 
 				// render
 				m_zRenderer.beginSwapChainRenderPass(commandBuffer);
+
+				// order here matters!
 				simpleRenderSystem.renderGameObjects(frameInfo);
+
 				pointLightSystem.render(frameInfo);
 				m_zRenderer.endSwapChainRenderPass(commandBuffer);
 				m_zRenderer.endFrame();
