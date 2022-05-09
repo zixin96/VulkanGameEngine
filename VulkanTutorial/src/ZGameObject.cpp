@@ -32,7 +32,7 @@ namespace ZZX
 			{translation.x, translation.y, translation.z, 1.0f}
 		};
 	}
-
+	 
 	glm::mat3 TransformComponent::normalMatrix()
 	{
 		const float c3 = glm::cos(rotation.z);
@@ -60,5 +60,15 @@ namespace ZZX
 				invScale.z * (c1 * c2),
 			}
 		};
+	}
+
+	ZGameObject ZGameObject::makePointLight(float intensity, float radius, glm::vec3 color)
+	{
+		ZGameObject gameObj = ZGameObject::createGameObject();
+		gameObj.m_color = color;
+		gameObj.m_transform.scale.x = radius;
+		gameObj.m_pointLight = std::make_unique<PointLightComponent>();
+		gameObj.m_pointLight->lightIntensity = intensity;
+		return gameObj;
 	}
 }

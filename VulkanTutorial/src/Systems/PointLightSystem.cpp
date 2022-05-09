@@ -11,8 +11,15 @@
 
 namespace ZZX
 {
+	struct PointLightPushConstants
+	{
+		glm::vec4 position{};
+		glm::vec4 color{};
+		float radius;
+	};
+
 	PointLightSystem::PointLightSystem(ZDevice& device, VkRenderPass renderPass,
-	                                       VkDescriptorSetLayout globalSetLayout)
+	                                   VkDescriptorSetLayout globalSetLayout)
 		: m_zDevice(device)
 	{
 		createPipelineLayout(globalSetLayout);
@@ -26,12 +33,12 @@ namespace ZZX
 
 	void PointLightSystem::createPipelineLayout(VkDescriptorSetLayout globalSetLayout)
 	{
-		/*VkPushConstantRange pushConstantRange{
+		VkPushConstantRange pushConstantRange{
 			// both vert/frag shaders can access push constants
 			.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
 			.offset = 0,
-			.size = sizeof(SimplePushConstantData)
-		};*/
+			.size = sizeof(PointLightPushConstants)
+		};
 
 		std::vector<VkDescriptorSetLayout> descriptorSetLayouts{globalSetLayout};
 
@@ -39,8 +46,8 @@ namespace ZZX
 			.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
 			.setLayoutCount = static_cast<uint32_t>(descriptorSetLayouts.size()),
 			.pSetLayouts = descriptorSetLayouts.data(),
-			.pushConstantRangeCount = 0,
-			.pPushConstantRanges = nullptr,
+			.pushConstantRangeCount = 1,
+			.pPushConstantRanges = &pushConstantRange,
 		};
 
 		if (vkCreatePipelineLayout(m_zDevice.device(),
@@ -73,6 +80,28 @@ namespace ZZX
 	}
 
 
+	void PointLightSystem::update(FrameInfo& frameInfo, GlobalUbo& ubo)
+	{
+		auto rotateLight = glm::rotate(glm::mat4(1.f), frameInfo.frameTime, {0.f, -1.f, 0.f});
+		int lightIndex = 0;
+		for (auto& kv : frameInfo.gameObjects)
+		{
+			auto& obj = kv.second;
+			if (obj.m_pointLight == nullptr) continue;
+
+			assert(lightIndex < MAX_LIGHTS && "Point lights exceed max specified");
+
+			// update light position
+			obj.m_transform.translation = glm::vec3(rotateLight * glm::vec4(obj.m_transform.translation, 1.0f));
+
+			// copy light to ubo
+			ubo.pointLights[lightIndex].position = glm::vec4(obj.m_transform.translation, 1.0f);
+			ubo.pointLights[lightIndex].color = glm::vec4(obj.m_color, obj.m_pointLight->lightIntensity);
+			lightIndex += 1;
+		}
+		ubo.numLights = lightIndex;
+	}
+
 	void PointLightSystem::render(FrameInfo& frameInfo)
 	{
 		m_zPipeline->bind(frameInfo.commandBuffer);
@@ -84,6 +113,22 @@ namespace ZZX
 		                        &frameInfo.globalDescriptorSet,
 		                        0,
 		                        nullptr);
-		vkCmdDraw(frameInfo.commandBuffer, 6, 1, 0, 0);
+
+		for (auto& kv : frameInfo.gameObjects)
+		{
+			auto& obj = kv.second;
+			if (obj.m_pointLight == nullptr) continue;
+			PointLightPushConstants push{};
+			push.position = glm::vec4(obj.m_transform.translation, 1.0f);
+			push.color = glm::vec4(obj.m_color, obj.m_pointLight->lightIntensity);
+			push.radius = obj.m_transform.scale.x;
+			vkCmdPushConstants(frameInfo.commandBuffer,
+			                   m_pipelineLayout,
+			                   VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
+			                   0,
+			                   sizeof(PointLightPushConstants),
+			                   &push);
+			vkCmdDraw(frameInfo.commandBuffer, 6, 1, 0, 0);
+		}
 	}
 }
