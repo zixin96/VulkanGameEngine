@@ -74,8 +74,7 @@ namespace ZZX
 	}
 
 
-	void SimpleRenderSystem::renderGameObjects(FrameInfo& frameInfo,
-	                                           std::vector<ZGameObject>& gameObjects)
+	void SimpleRenderSystem::renderGameObjects(FrameInfo& frameInfo)
 	{
 		m_zPipeline->bind(frameInfo.commandBuffer);
 		vkCmdBindDescriptorSets(frameInfo.commandBuffer,
@@ -86,8 +85,11 @@ namespace ZZX
 		                        &frameInfo.globalDescriptorSet,
 		                        0,
 		                        nullptr);
-		for (auto& obj : gameObjects)
+		for (auto& kv : frameInfo.gameObjects)
 		{
+			auto& obj = kv.second;
+			// skip game objects with no model objects
+			if (obj.m_model == nullptr) continue;
 			SimplePushConstantData push{
 				.modelMatrix = obj.m_transform.mat4(),
 				.normalMatrix = obj.m_transform.normalMatrix(),

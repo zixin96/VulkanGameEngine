@@ -1,5 +1,6 @@
 #pragma once
 #include "ZCamera.h"
+#include "ZGameObject.h"
 
 #include <vulkan/vulkan.h>
 
@@ -12,5 +13,6 @@ namespace ZZX
 		VkCommandBuffer commandBuffer;
 		ZCamera& camera;
 		VkDescriptorSet globalDescriptorSet;
+		ZGameObject::Map& gameObjects;
 	};
 }

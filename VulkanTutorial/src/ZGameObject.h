@@ -6,6 +6,7 @@
 
 // std
 #include <memory>
+#include <unordered_map>
 
 namespace ZZX
 {
@@ -27,6 +28,7 @@ namespace ZZX
 	{
 	public:
 		using id_t = unsigned int;
+		using Map = std::unordered_map<id_t, ZGameObject>;
 
 		static ZGameObject createGameObject()
 		{

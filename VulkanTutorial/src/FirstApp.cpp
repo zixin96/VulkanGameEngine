@@ -54,7 +54,7 @@ namespace ZZX
 		}
 
 		auto globalSetLayout = ZDescriptorSetLayout::Builder(m_zDevice)
-		                       .addBinding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT)
+		                       .addBinding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_ALL_GRAPHICS)
 		                       .build();
 		std::vector<VkDescriptorSet> globalDescriptorSets(ZSwapChain::MAX_FRAMES_IN_FLIGHT);
 		for (int i = 0; i < globalDescriptorSets.size(); i++)
@@ -100,7 +100,8 @@ namespace ZZX
 					frameTime,
 					commandBuffer,
 					camera,
-					globalDescriptorSets[frameIndex]
+					globalDescriptorSets[frameIndex],
+					m_gameObjects
 				};
 				// update
 				GlobalUbo ubo{};
@@ -110,7 +111,7 @@ namespace ZZX
 
 				// render
 				m_zRenderer.beginSwapChainRenderPass(commandBuffer);
-				simpleRenderSystem.renderGameObjects(frameInfo, m_gameObjects);
+				simpleRenderSystem.renderGameObjects(frameInfo);
 				m_zRenderer.endSwapChainRenderPass(commandBuffer);
 				m_zRenderer.endFrame();
 			}
@@ -122,24 +123,24 @@ namespace ZZX
 	void FirstApp::loadGameObjects()
 	{
 		std::shared_ptr<ZModel> zModel = ZModel::createModelFromFile(m_zDevice, "assets/models/flat_vase.obj");
-		auto gameObject = ZGameObject::createGameObject();
-		gameObject.m_model = zModel;
-		gameObject.m_transform.translation = {-0.5f, 0.5f, 0.f};
-		gameObject.m_transform.scale = glm::vec3{3.f, 1.5f, 3.f};
-		m_gameObjects.push_back(std::move(gameObject));
+		auto flat_vase = ZGameObject::createGameObject();
+		flat_vase.m_model = zModel;
+		flat_vase.m_transform.translation = {-0.5f, 0.5f, 0.f};
+		flat_vase.m_transform.scale = glm::vec3{3.f, 1.5f, 3.f};
+		m_gameObjects.emplace(flat_vase.getId(), std::move(flat_vase));
 
 		zModel = ZModel::createModelFromFile(m_zDevice, "assets/models/smooth_vase.obj");
 		auto smoothVase = ZGameObject::createGameObject();
 		smoothVase.m_model = zModel;
 		smoothVase.m_transform.translation = {0.5f, 0.5f, 0.f};
 		smoothVase.m_transform.scale = glm::vec3{3.f, 1.5f, 3.f};
-		m_gameObjects.push_back(std::move(smoothVase));
+		m_gameObjects.emplace(smoothVase.getId(), std::move(smoothVase));
 
 		zModel = ZModel::createModelFromFile(m_zDevice, "assets/models/quad.obj");
 		auto floor = ZGameObject::createGameObject();
 		floor.m_model = zModel;
 		floor.m_transform.translation = {0.0f, 0.5f, 0.f};
 		floor.m_transform.scale = glm::vec3{3.f, 1.f, 3.f};
-		m_gameObjects.push_back(std::move(floor));
+		m_gameObjects.emplace(floor.getId(), std::move(floor));
 	}
 }

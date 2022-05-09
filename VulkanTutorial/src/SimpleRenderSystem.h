@@ -21,8 +21,7 @@ namespace ZZX
 		// delete copy ctor and assignment to avoid dangling pointer
 		SimpleRenderSystem(const SimpleRenderSystem&) = delete;
 		SimpleRenderSystem& operator=(const SimpleRenderSystem&) = delete;
-		void renderGameObjects(FrameInfo& frameInfo,
-		                       std::vector<ZGameObject>& gameObjects);
+		void renderGameObjects(FrameInfo& frameInfo);
 	private:
 		void createPipelineLayout(VkDescriptorSetLayout globalSetLayout);
 		void createPipeline(VkRenderPass renderPass);

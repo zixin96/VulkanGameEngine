@@ -36,6 +36,6 @@ namespace ZZX
 
 		// note: order of declarations matters
 		std::unique_ptr<ZDescriptorPool> m_globalPool{};
-		std::vector<ZGameObject> m_gameObjects;
+		ZGameObject::Map m_gameObjects;
 	};
 }
