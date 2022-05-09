@@ -1,6 +1,6 @@
-workspace "VulkanTutorial"
+workspace "VulkanGameEngine"
 	architecture "x64"
-	startproject "VulkanTutorial"
+	startproject "VulkanGameEngine"
 
 	configurations
 	{
@@ -10,4 +10,4 @@ workspace "VulkanTutorial"
 	
 outputdir = "%{cfg.buildcfg}-%{cfg.system}-%{cfg.architecture}"
 
-include "VulkanTutorial"
+include "VulkanGameEngine"

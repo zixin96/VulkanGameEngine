@@ -1,4 +1,4 @@
-project "VulkanTutorial"
+project "VulkanGameEngine"
 	kind "ConsoleApp"
 	language "C++"
 	cppdialect "C++20"
