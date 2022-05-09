@@ -20,8 +20,10 @@ namespace ZZX
 {
 	struct GlobalUbo
 	{
-		alignas(16) glm::mat4 projectionView{1.f};
-		alignas(16) glm::vec3 lightDirection = glm::normalize(glm::vec3{1.f, -3.f, -1.f});
+		glm::mat4 projectionView{1.f};
+		glm::vec4 ambientLightColor{1.f, 1.f, 1.f, 0.02f}; // w is intensity
+		glm::vec3 lightPosition{-1.f};
+		alignas(16) glm::vec4 lightColor{1.f}; // w is light intensity
 	};
 
 	FirstApp::FirstApp()
@@ -72,9 +74,9 @@ namespace ZZX
 
 		// this game object is used to store camera's current state
 		auto viewerObject = ZGameObject::createGameObject();
+		viewerObject.m_transform.translation.z = -2.5f;
 
 		KeyboardMovementController cameraController{};
-
 		auto currentTime = std::chrono::high_resolution_clock::now();
 
 		while (!m_zWindow.shouldClose())
@@ -88,7 +90,7 @@ namespace ZZX
 			cameraController.moveInPlaneXZ(m_zWindow.getGLFWWindow(), frameTime, viewerObject);
 			camera.setViewYXZ(viewerObject.m_transform.translation, viewerObject.m_transform.rotation);
 			float aspect = m_zRenderer.getAspectRatio();
-			camera.setPerspectiveProjection(glm::radians(50.f), aspect, 0.1f, 10.f);
+			camera.setPerspectiveProjection(glm::radians(50.f), aspect, 0.1f, 100.f);
 
 			if (auto commandBuffer = m_zRenderer.beginFrame())
 			{
@@ -122,15 +124,22 @@ namespace ZZX
 		std::shared_ptr<ZModel> zModel = ZModel::createModelFromFile(m_zDevice, "assets/models/flat_vase.obj");
 		auto gameObject = ZGameObject::createGameObject();
 		gameObject.m_model = zModel;
-		gameObject.m_transform.translation = {-0.5f, 0.5f, 2.5f};
+		gameObject.m_transform.translation = {-0.5f, 0.5f, 0.f};
 		gameObject.m_transform.scale = glm::vec3{3.f, 1.5f, 3.f};
 		m_gameObjects.push_back(std::move(gameObject));
 
 		zModel = ZModel::createModelFromFile(m_zDevice, "assets/models/smooth_vase.obj");
 		auto smoothVase = ZGameObject::createGameObject();
 		smoothVase.m_model = zModel;
-		smoothVase.m_transform.translation = {0.5f, 0.5f, 2.5f};
+		smoothVase.m_transform.translation = {0.5f, 0.5f, 0.f};
 		smoothVase.m_transform.scale = glm::vec3{3.f, 1.5f, 3.f};
 		m_gameObjects.push_back(std::move(smoothVase));
+
+		zModel = ZModel::createModelFromFile(m_zDevice, "assets/models/quad.obj");
+		auto floor = ZGameObject::createGameObject();
+		floor.m_model = zModel;
+		floor.m_transform.translation = {0.0f, 0.5f, 0.f};
+		floor.m_transform.scale = glm::vec3{3.f, 1.f, 3.f};
+		m_gameObjects.push_back(std::move(floor));
 	}
 }
