@@ -14,7 +14,7 @@ namespace ZZX
 	struct SimplePushConstantData
 	{
 		glm::mat4 transform{1.f};
-		alignas(16) glm::vec3 color;
+		glm::mat4 normalMatrix{ 1.f };
 	};
 
 	SimpleRenderSystem::SimpleRenderSystem(ZDevice& device, VkRenderPass renderPass)
@@ -81,9 +81,10 @@ namespace ZZX
 
 		for (auto& obj : gameObjects)
 		{
+			auto modelMatrix = obj.m_transform.mat4();
 			SimplePushConstantData push{
-				.transform = projectionView * obj.m_transform.mat4(),
-				.color = obj.m_color,
+				.transform = projectionView * modelMatrix,
+				.normalMatrix = obj.m_transform.normalMatrix(),
 			};
 			vkCmdPushConstants(commandBuffer,
 			                   m_pipelineLayout,

@@ -68,11 +68,18 @@ namespace ZZX
 
 	void FirstApp::loadGameObjects()
 	{
-		std::shared_ptr<ZModel> zModel = ZModel::createModelFromFile(m_zDevice, "assets/models/smooth_vase.obj");
+		std::shared_ptr<ZModel> zModel = ZModel::createModelFromFile(m_zDevice, "assets/models/flat_vase.obj");
 		auto gameObject = ZGameObject::createGameObject();
 		gameObject.m_model = zModel;
-		gameObject.m_transform.translation = {0.f, 0.f, 2.5f};
-		gameObject.m_transform.scale = glm::vec3{ 3.f };
+		gameObject.m_transform.translation = {-0.5f, 0.5f, 2.5f};
+		gameObject.m_transform.scale = glm::vec3{3.f, 1.5f, 3.f};
 		m_gameObjects.push_back(std::move(gameObject));
+
+		zModel = ZModel::createModelFromFile(m_zDevice, "assets/models/smooth_vase.obj");
+		auto smoothVase = ZGameObject::createGameObject();
+		smoothVase.m_model = zModel;
+		smoothVase.m_transform.translation = {0.5f, 0.5f, 2.5f};
+		smoothVase.m_transform.scale = glm::vec3{3.f, 1.5f, 3.f};
+		m_gameObjects.push_back(std::move(smoothVase));
 	}
 }
