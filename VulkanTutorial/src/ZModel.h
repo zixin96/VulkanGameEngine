@@ -5,6 +5,8 @@
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #include <glm/glm.hpp>
 
+#include <memory>
+
 namespace ZZX
 {
 	class ZModel
@@ -12,17 +14,29 @@ namespace ZZX
 	public:
 		struct Vertex
 		{
-			glm::vec3 pos;
-			glm::vec3 color;
+			glm::vec3 pos{};
+			glm::vec3 color{};
+			glm::vec3 normal{};
+			glm::vec2 uv{};
 
 			static std::vector<VkVertexInputBindingDescription> getBindingDescriptions();
 			static std::vector<VkVertexInputAttributeDescription> getAttributeDescriptions();
+
+			bool operator==(const Vertex& other) const
+			{
+				return pos == other.pos &&
+					color == other.color &&
+					normal == other.normal &&
+					uv == other.uv;
+			}
 		};
 
 		struct Builder
 		{
 			std::vector<Vertex> vertices{};
 			std::vector<uint32_t> indices{};
+
+			void loadModel(const std::string& filepath);
 		};
 
 		ZModel(ZDevice& zDevice, const ZModel::Builder& builder);
@@ -31,6 +45,8 @@ namespace ZZX
 		// delete copy ctor and assignment to avoid dangling pointer
 		ZModel(const ZModel&);
 		ZModel& operator=(const ZModel&);
+
+		static std::unique_ptr<ZModel> createModelFromFile(ZDevice& device, const std::string& filepath);
 
 		void bind(VkCommandBuffer commandBuffer);
 		void draw(VkCommandBuffer commandBuffer);
