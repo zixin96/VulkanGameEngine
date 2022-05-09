@@ -4,6 +4,7 @@
 #include "ZGameObject.h"
 #include "ZWindow.h"
 #include "ZRenderer.h"
+#include "ZDescriptors.h"
 
 // std
 #include <memory>
@@ -32,6 +33,9 @@ namespace ZZX
 		ZWindow m_zWindow{WIDTH, HEIGHT, "Vulkan Renderer"};
 		ZDevice m_zDevice{m_zWindow};
 		ZRenderer m_zRenderer{ m_zWindow, m_zDevice };
+
+		// note: order of declarations matters
+		std::unique_ptr<ZDescriptorPool> m_globalPool{};
 		std::vector<ZGameObject> m_gameObjects;
 	};
 }

@@ -135,15 +135,6 @@ namespace ZZX
 
 	ZModel::~ZModel()
 	{
-		// TODO: this has limitations. Consider using library like VMA 
-		vkDestroyBuffer(m_zDevice.device(), m_vertexBuffer, nullptr);
-		vkFreeMemory(m_zDevice.device(), m_vertexBufferMemory, nullptr);
-
-		if (m_hasIndexBuffer)
-		{
-			vkDestroyBuffer(m_zDevice.device(), m_indexBuffer, nullptr);
-			vkFreeMemory(m_zDevice.device(), m_indexBufferMemory, nullptr);
-		}
 	}
 
 	std::unique_ptr<ZModel> ZModel::createModelFromFile(ZDevice& device, const std::string& filepath)
@@ -156,12 +147,12 @@ namespace ZZX
 
 	void ZModel::bind(VkCommandBuffer commandBuffer)
 	{
-		VkBuffer buffers[] = {m_vertexBuffer};
+		VkBuffer buffers[] = {m_vertexBuffer->getBuffer()};
 		VkDeviceSize offsets[] = {0};
 		vkCmdBindVertexBuffers(commandBuffer, 0, 1, buffers, offsets);
 		if (m_hasIndexBuffer)
 		{
-			vkCmdBindIndexBuffer(commandBuffer, m_indexBuffer, 0, VK_INDEX_TYPE_UINT32);
+			vkCmdBindIndexBuffer(commandBuffer, m_indexBuffer->getBuffer(), 0, VK_INDEX_TYPE_UINT32);
 		}
 	}
 
@@ -183,28 +174,25 @@ namespace ZZX
 		assert(m_vertexCount >= 3 && "vertex count must be at least 3");
 		VkDeviceSize bufferSize = sizeof(vertices[0]) * vertices.size();
 
-		VkBuffer stagingBuffer;
-		VkDeviceMemory stagingBufferMemory;
-		m_zDevice.createBuffer(bufferSize,
-		                       VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-		                       VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-		                       stagingBuffer,
-		                       stagingBufferMemory);
-		void* data;
-		vkMapMemory(m_zDevice.device(), stagingBufferMemory, 0, bufferSize, 0, &data);
-		// how mpmcpy works here: https://youtu.be/mnKp501RXDc?t=1041
-		memcpy(data, vertices.data(), static_cast<size_t>(bufferSize));
-		vkUnmapMemory(m_zDevice.device(), stagingBufferMemory);
+		uint32_t vertexSize = sizeof(vertices[0]);
+		ZBuffer stagingBuffer{
+			m_zDevice,
+			vertexSize,
+			m_vertexCount,
+			VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+		};
 
-		m_zDevice.createBuffer(bufferSize,
-		                       VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-		                       VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-		                       m_vertexBuffer,
-		                       m_vertexBufferMemory);
-		m_zDevice.copyBuffer(stagingBuffer, m_vertexBuffer, bufferSize);
+		stagingBuffer.map();
+		stagingBuffer.writeToBuffer((void*)vertices.data());
 
-		vkDestroyBuffer(m_zDevice.device(), stagingBuffer, nullptr);
-		vkFreeMemory(m_zDevice.device(), stagingBufferMemory, nullptr);
+		m_vertexBuffer = std::make_unique<ZBuffer>(m_zDevice,
+		                                           vertexSize,
+		                                           m_vertexCount,
+		                                           VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+		                                           VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+
+		m_zDevice.copyBuffer(stagingBuffer.getBuffer(), m_vertexBuffer->getBuffer(), bufferSize);
 	}
 
 	void ZModel::createIndexBuffers(const std::vector<uint32_t>& indices)
@@ -216,28 +204,23 @@ namespace ZZX
 			return;
 		}
 		VkDeviceSize bufferSize = sizeof(indices[0]) * m_indexCount;
+		uint32_t indexSize = sizeof(indices[0]);
+		ZBuffer stagingBuffer{
+			m_zDevice,
+			indexSize,
+			m_indexCount,
+			VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+		};
+		stagingBuffer.map();
+		stagingBuffer.writeToBuffer((void*)indices.data());
 
-		VkBuffer stagingBuffer;
-		VkDeviceMemory stagingBufferMemory;
-		m_zDevice.createBuffer(bufferSize,
-		                       VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-		                       VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-		                       stagingBuffer,
-		                       stagingBufferMemory);
-		void* data;
-		vkMapMemory(m_zDevice.device(), stagingBufferMemory, 0, bufferSize, 0, &data);
-		// how mpmcpy works here: https://youtu.be/mnKp501RXDc?t=1041
-		memcpy(data, indices.data(), static_cast<size_t>(bufferSize));
-		vkUnmapMemory(m_zDevice.device(), stagingBufferMemory);
+		m_indexBuffer = std::make_unique<ZBuffer>(m_zDevice,
+		                                          indexSize,
+		                                          m_indexCount,
+		                                          VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+		                                          VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
-		m_zDevice.createBuffer(bufferSize,
-		                       VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-		                       VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-		                       m_indexBuffer,
-		                       m_indexBufferMemory);
-		m_zDevice.copyBuffer(stagingBuffer, m_indexBuffer, bufferSize);
-
-		vkDestroyBuffer(m_zDevice.device(), stagingBuffer, nullptr);
-		vkFreeMemory(m_zDevice.device(), stagingBufferMemory, nullptr);
+		m_zDevice.copyBuffer(stagingBuffer.getBuffer(), m_indexBuffer->getBuffer(), bufferSize);
 	}
 }

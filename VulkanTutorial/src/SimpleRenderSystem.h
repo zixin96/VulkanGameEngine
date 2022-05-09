@@ -4,6 +4,7 @@
 #include "ZGameObject.h"
 #include "ZPipeline.h"
 #include "ZCamera.h"
+#include "ZFrameInfo.h"
 
 // std
 #include <memory>
@@ -14,17 +15,16 @@ namespace ZZX
 	class SimpleRenderSystem
 	{
 	public:
-		SimpleRenderSystem(ZDevice& device, VkRenderPass renderPass);
+		SimpleRenderSystem(ZDevice& device, VkRenderPass renderPass, VkDescriptorSetLayout globalSetLayout);
 		~SimpleRenderSystem();
 
 		// delete copy ctor and assignment to avoid dangling pointer
 		SimpleRenderSystem(const SimpleRenderSystem&) = delete;
 		SimpleRenderSystem& operator=(const SimpleRenderSystem&) = delete;
-		void renderGameObjects(VkCommandBuffer commandBuffer,
-		                       std::vector<ZGameObject>& gameObjects,
-		                       const ZCamera& camera);
+		void renderGameObjects(FrameInfo& frameInfo,
+		                       std::vector<ZGameObject>& gameObjects);
 	private:
-		void createPipelineLayout();
+		void createPipelineLayout(VkDescriptorSetLayout globalSetLayout);
 		void createPipeline(VkRenderPass renderPass);
 
 		ZDevice& m_zDevice;

@@ -14,12 +14,23 @@
 #include "SimpleRenderSystem.h"
 #include "ZCamera.h"
 #include "KeyboardMovementController.h"
-
+#include "ZBuffer.h"
 
 namespace ZZX
 {
+	struct GlobalUbo
+	{
+		alignas(16) glm::mat4 projectionView{1.f};
+		alignas(16) glm::vec3 lightDirection = glm::normalize(glm::vec3{1.f, -3.f, -1.f});
+	};
+
 	FirstApp::FirstApp()
 	{
+		m_globalPool = ZDescriptorPool::Builder(m_zDevice)
+		               .setMaxSets(ZSwapChain::MAX_FRAMES_IN_FLIGHT)
+		               .addPoolSize(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, ZSwapChain::MAX_FRAMES_IN_FLIGHT)
+		               .build();
+
 		loadGameObjects();
 	}
 
@@ -29,7 +40,32 @@ namespace ZZX
 
 	void FirstApp::run()
 	{
-		SimpleRenderSystem simpleRenderSystem{m_zDevice, m_zRenderer.getSwapChainRenderPass()};
+		std::vector<std::unique_ptr<ZBuffer>> uboBuffers(ZSwapChain::MAX_FRAMES_IN_FLIGHT);
+		for (int i = 0; i < uboBuffers.size(); i++)
+		{
+			uboBuffers[i] = std::make_unique<ZBuffer>(m_zDevice,
+			                                          sizeof(GlobalUbo),
+			                                          1,
+			                                          VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+			                                          VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+			uboBuffers[i]->map();
+		}
+
+		auto globalSetLayout = ZDescriptorSetLayout::Builder(m_zDevice)
+		                       .addBinding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT)
+		                       .build();
+		std::vector<VkDescriptorSet> globalDescriptorSets(ZSwapChain::MAX_FRAMES_IN_FLIGHT);
+		for (int i = 0; i < globalDescriptorSets.size(); i++)
+		{
+			auto bufferInfo = uboBuffers[i]->descriptorInfo();
+			ZDescriptorWriter(*globalSetLayout, *m_globalPool)
+				.writeBuffer(0, &bufferInfo)
+				.build(globalDescriptorSets[i]);
+		}
+
+		SimpleRenderSystem simpleRenderSystem{
+			m_zDevice, m_zRenderer.getSwapChainRenderPass(), globalSetLayout->getDescriptorSetLayout()
+		};
 
 		ZCamera camera{};
 		camera.setViewTarget(glm::vec3{-1.f, -2.f, 2.f}, glm::vec3{0.0f, 0.f, 2.5f});
@@ -56,8 +92,23 @@ namespace ZZX
 
 			if (auto commandBuffer = m_zRenderer.beginFrame())
 			{
+				int frameIndex = m_zRenderer.getFrameIndex();
+				FrameInfo frameInfo{
+					frameIndex,
+					frameTime,
+					commandBuffer,
+					camera,
+					globalDescriptorSets[frameIndex]
+				};
+				// update
+				GlobalUbo ubo{};
+				ubo.projectionView = camera.getProjection() * camera.getView();
+				uboBuffers[frameIndex]->writeToBuffer(&ubo);
+				uboBuffers[frameIndex]->flush();
+
+				// render
 				m_zRenderer.beginSwapChainRenderPass(commandBuffer);
-				simpleRenderSystem.renderGameObjects(commandBuffer, m_gameObjects, camera);
+				simpleRenderSystem.renderGameObjects(frameInfo, m_gameObjects);
 				m_zRenderer.endSwapChainRenderPass(commandBuffer);
 				m_zRenderer.endFrame();
 			}
