@@ -37,7 +37,7 @@ namespace ZZX
 	{
 	public:
 		// Disable validation layer on release mode
-#ifdef NDEBUG
+#ifdef GLCORE_RELEASE
 		const bool m_enableValidationLayers = false;
 #else
 		const bool m_enableValidationLayers = true;

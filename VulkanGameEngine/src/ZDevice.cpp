@@ -13,7 +13,7 @@ namespace ZZX
 	                                                    void* pUserData)
 	{
 		std::cerr << "validation layer: " << pCallbackData->pMessage << std::endl;
-
+		// always return VK_FALSE
 		return VK_FALSE;
 	}
 
@@ -114,7 +114,8 @@ namespace ZZX
 		createInfo.enabledExtensionCount = static_cast<uint32_t>(m_instanceExtensions.size());
 		createInfo.ppEnabledExtensionNames = m_instanceExtensions.data();
 
-		// Debugging instance creation and destruction
+		// it is necessary to place debugCreateInfo outside the if statement
+		// to ensure it is not destroyed before vkCreateInstance call
 		VkDebugUtilsMessengerCreateInfoEXT debugCreateInfo{};
 		// specify the desired global validation layers
 		if (m_enableValidationLayers)
@@ -308,6 +309,7 @@ namespace ZZX
 	void ZDevice::populateDebugMessengerCreateInfo(
 		VkDebugUtilsMessengerCreateInfoEXT& createInfo)
 	{
+		// you can configure more settings using vk_layer_settings.txt
 		createInfo = {};
 		createInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
 		createInfo.messageSeverity =
@@ -327,7 +329,7 @@ namespace ZZX
 	{
 		if (!m_enableValidationLayers) { return; }
 
-		VkDebugUtilsMessengerCreateInfoEXT createInfo;
+		VkDebugUtilsMessengerCreateInfoEXT createInfo{};
 		populateDebugMessengerCreateInfo(createInfo);
 
 		if (CreateDebugUtilsMessengerEXT(m_VkInstance, &createInfo, nullptr, &m_debugMessenger) != VK_SUCCESS)
@@ -343,10 +345,10 @@ namespace ZZX
 		std::vector<VkLayerProperties> availableLayers(layerCount);
 		vkEnumerateInstanceLayerProperties(&layerCount, availableLayers.data());
 		std::vector<std::string> availLayerName;
-		// std::cout << "available layers:\n";
+		std::cout << "Available layers:\n";
 		for (const auto& layerProperties : availableLayers)
 		{
-			// std::cout << '\t' << layerProperties.layerName << '\n';
+			std::cout << '\t' << layerProperties.layerName << '\n';
 		}
 		// check if our desired layers are supported 
 		std::set<std::string> requiredLayers(m_validationLayers.begin(), m_validationLayers.end());
@@ -394,16 +396,15 @@ namespace ZZX
 		const char** glfwExtensions;
 		glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
 		// these extensions are requested by GLFW 
-		for(uint32_t i = 0; i < glfwExtensionCount; i++)
+		for (uint32_t i = 0; i < glfwExtensionCount; i++)
 		{
 			m_instanceExtensions.push_back(glfwExtensions[i]);
 		}
-#ifdef NDEBUG
-#else
-		// this extension provides debug message callback
-		m_instanceExtensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
-#endif
-	
+		if (m_enableValidationLayers)
+		{
+			// this extension provides debug message callback
+			m_instanceExtensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+		}
 
 		// check if our desired instance extensions are supported
 		std::set<std::string> requiredExtensions(m_instanceExtensions.begin(), m_instanceExtensions.end());
