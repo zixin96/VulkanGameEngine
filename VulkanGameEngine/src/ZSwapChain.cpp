@@ -31,7 +31,7 @@ namespace ZZX
 
 	ZSwapChain::~ZSwapChain()
 	{
-		for (auto imageView : m_swapChainImageViews)
+		for (auto& imageView : m_swapChainImageViews)
 		{
 			vkDestroyImageView(m_ZDevice.device(), imageView, nullptr);
 		}
@@ -237,19 +237,39 @@ namespace ZZX
 
 	void ZSwapChain::createImageViews()
 	{
+		// creates an image view for every image in the swap chain
 		m_swapChainImageViews.resize(m_swapChainImages.size());
 		for (size_t i = 0; i < m_swapChainImages.size(); i++)
 		{
-			VkImageViewCreateInfo viewInfo{};
-			viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-			viewInfo.image = m_swapChainImages[i];
-			viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
-			viewInfo.format = m_swapChainImageFormat;
-			viewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-			viewInfo.subresourceRange.baseMipLevel = 0;
-			viewInfo.subresourceRange.levelCount = 1;
-			viewInfo.subresourceRange.baseArrayLayer = 0;
-			viewInfo.subresourceRange.layerCount = 1;
+			VkImageViewCreateInfo viewInfo{
+				.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+				.image = m_swapChainImages[i],
+
+				// the following two fields specify how the image data should be interpreted
+				// in this case, we treat the image data as 2D SRGB 32-bit texture
+				.viewType = VK_IMAGE_VIEW_TYPE_2D,
+				.format = m_swapChainImageFormat,
+
+				// we don't want to swizzle the color channels around
+				.components = {
+					.r = VK_COMPONENT_SWIZZLE_IDENTITY,
+					.g = VK_COMPONENT_SWIZZLE_IDENTITY,
+					.b = VK_COMPONENT_SWIZZLE_IDENTITY,
+					.a = VK_COMPONENT_SWIZZLE_IDENTITY,
+				},
+
+				// what the image's purpose is and which part of the image should be accessed? 
+				.subresourceRange = {
+					// image will be used as color targets
+					.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+
+					// we don't have any mipmap levels or multiple layers
+					.baseMipLevel = 0,
+					.levelCount = 1,
+					.baseArrayLayer = 0,
+					.layerCount = 1,
+				}
+			};
 
 			if (vkCreateImageView(m_ZDevice.device(), &viewInfo, nullptr, &m_swapChainImageViews[i]) !=
 				VK_SUCCESS)
