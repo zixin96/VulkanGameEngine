@@ -15,9 +15,10 @@ namespace ZZX
 	class FirstApp
 	{
 	public:
-		// App-specific width/height
-		static constexpr int WIDTH = 3840;
-		static constexpr int HEIGHT = 2160;
+		// Application-specific window's width/height
+		// Modify these if you want to change the resolution of the window:
+		static constexpr int WINDOW_WIDTH = 3000;
+		static constexpr int WINDOW_HEIGHT = 1600;
 
 		FirstApp();
 		~FirstApp();
@@ -29,8 +30,7 @@ namespace ZZX
 		void run();
 	private:
 		void loadGameObjects();
-
-		ZWindow m_zWindow{WIDTH, HEIGHT, "Vulkan Renderer"};
+		ZWindow m_zWindow{WINDOW_WIDTH, WINDOW_HEIGHT, "Vulkan Engine"};
 		ZDevice m_zDevice{m_zWindow};
 		ZRenderer m_zRenderer{ m_zWindow, m_zDevice };
 

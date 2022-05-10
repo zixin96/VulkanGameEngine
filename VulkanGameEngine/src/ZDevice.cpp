@@ -74,18 +74,18 @@ namespace ZZX
 
 		if (m_enableValidationLayers)
 		{
-			DestroyDebugUtilsMessengerEXT(m_instance, m_debugMessenger, nullptr);
+			DestroyDebugUtilsMessengerEXT(m_VkInstance, m_debugMessenger, nullptr);
 		}
 
-		vkDestroySurfaceKHR(m_instance, m_surface, nullptr);
+		vkDestroySurfaceKHR(m_VkInstance, m_surface, nullptr);
 
 		// this call will destroy both instance and physical device 
-		vkDestroyInstance(m_instance, nullptr);
+		vkDestroyInstance(m_VkInstance, nullptr);
 	}
 
 	void ZDevice::createInstance()
 	{
-		// check if the requested validation layers and instance extensions are supported
+		// Before creating an instance, we need to check if the requested validation layers and instance extensions are supported
 		if (m_enableValidationLayers && !checkValidationLayerSupport())
 		{
 			throw std::runtime_error("validation layers requested, but not available!");
@@ -95,19 +95,22 @@ namespace ZZX
 			throw std::runtime_error("extensions requested, but not available!");
 		}
 
+		// Before creating an instance, we can optionally provide some info about our application to the driver for potential optimization
+		VkApplicationInfo appInfo{
+			.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
+			.pApplicationName = "Hello Triangle",
+			.applicationVersion = VK_MAKE_VERSION(1, 0, 0),
+			.pEngineName = "No Engine",
+			.engineVersion = VK_MAKE_VERSION(1, 0, 0),
+			.apiVersion = VK_API_VERSION_1_0,
+		};
+
+		// To create an instance, we must provide a createInfo struct that tells the Vulkan driver which *global* extensions and validation layers we want to use
 		VkInstanceCreateInfo createInfo{};
 		createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
-
-		VkApplicationInfo appInfo{};
-		appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-		appInfo.pApplicationName = "Hello Triangle";
-		appInfo.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
-		appInfo.pEngineName = "No Engine";
-		appInfo.engineVersion = VK_MAKE_VERSION(1, 0, 0);
-		appInfo.apiVersion = VK_API_VERSION_1_0;
 		createInfo.pApplicationInfo = &appInfo;
 
-		// specify the desired global extensions
+		// The next two layers specify the desired global extensions
 		createInfo.enabledExtensionCount = static_cast<uint32_t>(m_instanceExtensions.size());
 		createInfo.ppEnabledExtensionNames = m_instanceExtensions.data();
 
@@ -130,7 +133,7 @@ namespace ZZX
 			createInfo.pNext = nullptr;
 		}
 
-		if (vkCreateInstance(&createInfo, nullptr, &m_instance) != VK_SUCCESS)
+		if (vkCreateInstance(&createInfo, nullptr, &m_VkInstance) != VK_SUCCESS)
 		{
 			throw std::runtime_error("failed to create instance!");
 		}
@@ -139,14 +142,14 @@ namespace ZZX
 	void ZDevice::pickPhysicalDevice()
 	{
 		uint32_t deviceCount = 0;
-		vkEnumeratePhysicalDevices(m_instance, &deviceCount, nullptr);
+		vkEnumeratePhysicalDevices(m_VkInstance, &deviceCount, nullptr);
 		if (deviceCount == 0)
 		{
 			throw std::runtime_error("failed to find GPUs with Vulkan support!");
 		}
 
 		std::vector<VkPhysicalDevice> devices(deviceCount);
-		vkEnumeratePhysicalDevices(m_instance, &deviceCount, devices.data());
+		vkEnumeratePhysicalDevices(m_VkInstance, &deviceCount, devices.data());
 
 		// this map stores score-physicalDevice pair by increasing score
 		// multiple GPU could have the same score, thus we use multimap
@@ -300,7 +303,7 @@ namespace ZZX
 		}
 	}
 
-	void ZDevice::createSurface() { m_window.createWindowSurface(m_instance, &m_surface); }
+	void ZDevice::createSurface() { m_window.createWindowSurface(m_VkInstance, &m_surface); }
 
 	void ZDevice::populateDebugMessengerCreateInfo(
 		VkDebugUtilsMessengerCreateInfoEXT& createInfo)
@@ -327,7 +330,7 @@ namespace ZZX
 		VkDebugUtilsMessengerCreateInfoEXT createInfo;
 		populateDebugMessengerCreateInfo(createInfo);
 
-		if (CreateDebugUtilsMessengerEXT(m_instance, &createInfo, nullptr, &m_debugMessenger) != VK_SUCCESS)
+		if (CreateDebugUtilsMessengerEXT(m_VkInstance, &createInfo, nullptr, &m_debugMessenger) != VK_SUCCESS)
 		{
 			throw std::runtime_error("failed to set up debug messenger!");
 		}
@@ -380,12 +383,29 @@ namespace ZZX
 		vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, nullptr);
 		std::vector<VkExtensionProperties> availableExtensions(extensionCount);
 		vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, availableExtensions.data());
-		// std::cout << "available instance extensions:\n";
+		std::cout << "Available instance extensions:\n";
 		for (const auto& extension : availableExtensions)
 		{
-			// std::cout << '\t' << extension.extensionName << '\n';
+			std::cout << '\t' << extension.extensionName << '\n';
 		}
-		// check if our desired instance extensions are supported 
+
+		// fill desired extensions
+		uint32_t glfwExtensionCount = 0;
+		const char** glfwExtensions;
+		glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
+		// these extensions are requested by GLFW 
+		for(uint32_t i = 0; i < glfwExtensionCount; i++)
+		{
+			m_instanceExtensions.push_back(glfwExtensions[i]);
+		}
+#ifdef NDEBUG
+#else
+		// this extension provides debug message callback
+		m_instanceExtensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+#endif
+	
+
+		// check if our desired instance extensions are supported
 		std::set<std::string> requiredExtensions(m_instanceExtensions.begin(), m_instanceExtensions.end());
 		for (const auto& extension : availableExtensions)
 		{

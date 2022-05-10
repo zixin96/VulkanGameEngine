@@ -19,9 +19,10 @@ namespace ZZX
 	{
 		// initialize the GLFW library
 		glfwInit();
-		// do not create an OpenGL context
+
+		// since GLFW is originally designed to create an OpenGL context, we need to tell it to not create an OpenGL context:
 		glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-		// create the actual window.
+
 		m_window = glfwCreateWindow(m_width, m_height, m_name.c_str(), nullptr, nullptr);
 
 		// listen to size changes on the glfwWindow

@@ -25,6 +25,7 @@ namespace ZZX
 		void createWindowSurface(VkInstance instance, VkSurfaceKHR* surface);
 	private:
 		void initWindow();
+
 		// this function will be called when the window is resized by the user
 		static void framebufferResizeCallback(GLFWwindow* window, int width, int height);
 
@@ -36,6 +37,7 @@ namespace ZZX
 		bool m_framebufferResized = false;
 
 		std::string m_name;
+
 		GLFWwindow* m_window;
 	};
 }

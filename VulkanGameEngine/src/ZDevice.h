@@ -103,7 +103,7 @@ namespace ZZX
 		bool checkInstanceExtensionsSupport();
 		SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice device);
 
-		VkInstance m_instance;
+		VkInstance m_VkInstance;
 		VkDebugUtilsMessengerEXT m_debugMessenger;
 		VkPhysicalDevice m_physicalDevice = VK_NULL_HANDLE;
 		ZWindow& m_window;
@@ -121,16 +121,6 @@ namespace ZZX
 			VK_KHR_SWAPCHAIN_EXTENSION_NAME
 		};
 
-		const std::vector<const char*> m_instanceExtensions = {
-			// this extension provides a VkSurfaceKHR handle, an object representing an output for presentation
-			"VK_KHR_surface",
-			// this extension provides platform-specific HWND and HMODULE handles on Windows for surface creation
-			"VK_KHR_win32_surface",
-		#ifdef NDEBUG
-		#else
-			// this extension provides debug message callback
-			VK_EXT_DEBUG_UTILS_EXTENSION_NAME,
-		#endif
-		};
+		std::vector<const char*> m_instanceExtensions;
 	};
 };
