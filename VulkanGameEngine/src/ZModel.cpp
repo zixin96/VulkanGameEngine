@@ -1,11 +1,6 @@
-﻿#include "ZModel.h"
+﻿#include "pch.h"
+#include "ZModel.h"
 #include "ZUtils.h"
-
-#include <iostream>
-#include <unordered_map>
-#include <tinyobjloader/tiny_obj_loader.h>
-#define GLM_ENABLE_EXPERIMENTAL
-#include <glm/gtx/hash.hpp>
 
 namespace std
 {

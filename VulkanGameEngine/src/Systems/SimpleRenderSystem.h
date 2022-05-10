@@ -6,10 +6,6 @@
 #include "ZCamera.h"
 #include "ZFrameInfo.h"
 
-// std
-#include <memory>
-#include <vector>
-
 namespace ZZX
 {
 	class SimpleRenderSystem

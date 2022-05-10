@@ -1,8 +1,5 @@
-﻿#include "ZDescriptors.h"
-
-// std
-#include <cassert>
-#include <stdexcept>
+﻿#include "pch.h"
+#include "ZDescriptors.h"
 
 namespace ZZX
 {

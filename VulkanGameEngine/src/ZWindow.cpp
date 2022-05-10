@@ -1,5 +1,5 @@
-﻿#include "ZWindow.h"
-#include <stdexcept>
+﻿#include "pch.h"
+#include "ZWindow.h"
 
 namespace ZZX
 {

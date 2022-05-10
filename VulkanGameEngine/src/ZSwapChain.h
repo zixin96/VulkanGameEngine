@@ -1,8 +1,6 @@
 ﻿#pragma once
 #include "ZDevice.h"
 
-#include <memory>
-
 namespace ZZX
 {
 	class ZSwapChain
@@ -11,8 +9,8 @@ namespace ZZX
 		// how many frames should be processed concurrently
 		static constexpr int MAX_FRAMES_IN_FLIGHT = 2;
 
-		ZSwapChain(ZDevice& deviceRef, VkExtent2D windowExtent);
-		ZSwapChain(ZDevice& deviceRef, VkExtent2D windowExtent, std::shared_ptr<ZSwapChain> previous);
+		ZSwapChain(ZDevice& deviceRef);
+		ZSwapChain(ZDevice& deviceRef, std::shared_ptr<ZSwapChain> previous);
 		~ZSwapChain();
 
 		ZSwapChain(const ZSwapChain&) = delete;
@@ -75,10 +73,8 @@ namespace ZZX
 		std::vector<VkImage> m_swapChainImages;
 		std::vector<VkImageView> m_swapChainImageViews;
 
-		ZDevice& m_zDevice;
-		VkExtent2D m_windowExtent;
-
-		VkSwapchainKHR m_swapChain;
+		ZDevice& m_ZDevice;
+		VkSwapchainKHR m_VkSwapchainKHR;
 
 		// keep track of the old swap chain for better resizing behavior
 		// (since resources can be reused when you provide the old swap chain when creating a new one)

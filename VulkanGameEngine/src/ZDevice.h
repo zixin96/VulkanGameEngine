@@ -1,16 +1,13 @@
 ﻿#pragma once
 #include "ZWindow.h"
 
-#include <vector>
-#include <optional>
-
 namespace ZZX
 {
 	// this struct represents all the queue families we need
 	struct QueueFamilyIndices
 	{
 		// these uint32_t represent indices into the array of queue families
-		// C++17 std::optional: graphicsFamily has "no value" until you assign a value to it
+		// C++17 std::optional is used to distinguish between the case of a value being assigned or not
 
 		std::optional<uint32_t> graphicsFamily;
 		std::optional<uint32_t> presentFamily;
@@ -52,16 +49,17 @@ namespace ZZX
 		ZDevice(ZDevice&&) = delete;
 		ZDevice& operator=(ZDevice&&) = delete;
 
-		VkCommandPool getCommandPool() { return m_commandPool; }
-		VkDevice device() { return m_device; }
-		VkSurfaceKHR surface() { return m_surface; }
-		VkQueue graphicsQueue() { return m_graphicsQueue; }
-		VkQueue presentQueue() { return m_presentQueue; }
+		VkCommandPool getCommandPool() { return m_VkCommandPool; }
+		VkDevice device() { return m_VkDevice; }
+		VkSurfaceKHR surface() { return m_VkSurfaceKHR; }
+		VkQueue graphicsQueue() { return m_VkGraphicsQueue; }
+		VkQueue presentQueue() { return m_VkPresentQueue; }
+		ZWindow& getZWindow() const { return m_ZWindow; }
 
-		SwapChainSupportDetails getSwapChainSupport() { return querySwapChainSupport(m_physicalDevice); }
+		SwapChainSupportDetails getSwapChainSupport() { return querySwapChainSupport(m_VkPhysicalDevice); }
 		uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
 
-		QueueFamilyIndices findPhysicalQueueFamilies() { return findQueueFamilies(m_physicalDevice); }
+		QueueFamilyIndices findPhysicalQueueFamilies() { return findQueueFamilyIndices(m_VkPhysicalDevice); }
 		VkFormat findSupportedFormat(
 			const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features);
 
@@ -95,24 +93,27 @@ namespace ZZX
 		void createCommandPool();
 
 		// helper functions
-		int rateDeviceSuitability(VkPhysicalDevice device);
+		std::tuple<int, std::string> rateDeviceSuitability(VkPhysicalDevice device);
 		bool checkValidationLayerSupport();
-		QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device);
+		QueueFamilyIndices findQueueFamilyIndices(VkPhysicalDevice device);
 		void populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo);
 		bool checkDeviceExtensionSupport(VkPhysicalDevice device);
 		bool checkInstanceExtensionsSupport();
 		SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice device);
 
 		VkInstance m_VkInstance;
-		VkDebugUtilsMessengerEXT m_debugMessenger;
-		VkPhysicalDevice m_physicalDevice = VK_NULL_HANDLE;
-		ZWindow& m_window;
-		VkCommandPool m_commandPool;
+		VkDebugUtilsMessengerEXT m_VkDebugUtilsMessengerEXT;
 
-		VkDevice m_device;
-		VkSurfaceKHR m_surface;
-		VkQueue m_graphicsQueue;
-		VkQueue m_presentQueue;
+		// the graphics card that supports the features we need
+		VkPhysicalDevice m_VkPhysicalDevice = VK_NULL_HANDLE;
+
+		ZWindow& m_ZWindow;
+		VkCommandPool m_VkCommandPool;
+
+		VkDevice m_VkDevice;
+		VkSurfaceKHR m_VkSurfaceKHR;
+		VkQueue m_VkGraphicsQueue;
+		VkQueue m_VkPresentQueue;
 
 		const std::vector<const char*> m_validationLayers = {
 			"VK_LAYER_KHRONOS_validation"

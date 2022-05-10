@@ -1,13 +1,5 @@
-﻿#include "SimpleRenderSystem.h"
-
-#include <stdexcept>
-#include <array>
-
-// libs
-#define GLM_FORCE_RADIANS
-#define GLM_FORCE_DEPTH_ZERO_TO_ONE
-#include <glm/glm.hpp>
-#include <glm/gtc/constants.hpp>
+﻿#include "pch.h"
+#include "SimpleRenderSystem.h"
 
 namespace ZZX
 {

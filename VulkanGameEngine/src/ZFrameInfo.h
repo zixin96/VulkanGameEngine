@@ -2,8 +2,6 @@
 #include "ZCamera.h"
 #include "ZGameObject.h"
 
-#include <vulkan/vulkan.h>
-
 namespace ZZX
 {
 #define MAX_LIGHTS 10

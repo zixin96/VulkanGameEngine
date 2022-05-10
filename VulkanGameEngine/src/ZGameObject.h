@@ -1,13 +1,6 @@
 ﻿#pragma once
 #include "ZModel.h"
 
-// libs
-#include <glm/gtc/matrix_transform.hpp>
-
-// std
-#include <memory>
-#include <unordered_map>
-
 namespace ZZX
 {
 	struct TransformComponent

@@ -1,4 +1,5 @@
-﻿/*
+﻿#include "pch.h"
+/*
  * Encapsulates a vulkan buffer
  *
  * Initially based off VulkanBuffer by Sascha Willems -
@@ -7,9 +8,7 @@
 
 #include "ZBuffer.h"
 
-// std
-#include <cassert>
-#include <cstring>
+
 
 namespace ZZX
 {

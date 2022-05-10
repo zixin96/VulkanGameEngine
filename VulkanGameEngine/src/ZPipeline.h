@@ -2,9 +2,6 @@
 #include "ZDevice.h"
 #include "ZModel.h"
 
-#include <string>
-#include <vector>
-
 namespace ZZX
 {
 	// this struct contains data specifying how we want to configure the pipeline

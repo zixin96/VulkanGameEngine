@@ -2,11 +2,6 @@
 
 #include "ZDevice.h"
 
-// std
-#include <memory>
-#include <unordered_map>
-#include <vector>
-
 namespace ZZX
 {
 	class ZDescriptorSetLayout

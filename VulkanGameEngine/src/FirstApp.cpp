@@ -1,15 +1,5 @@
-﻿#include "FirstApp.h"
-
-#include <array>
-#include <chrono>
-#include <cassert>
-#include <stdexcept>
-
-// libs
-#define GLM_FORCE_RADIANS
-#define GLM_FORCE_DEPTH_ZERO_TO_ONE
-#include <glm/glm.hpp>
-#include <glm/gtc/constants.hpp>
+﻿#include "pch.h"
+#include "FirstApp.h"
 
 #include "Systems/SimpleRenderSystem.h"
 #include "Systems/PointLightSystem.h"

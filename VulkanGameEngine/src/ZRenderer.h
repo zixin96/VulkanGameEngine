@@ -3,10 +3,6 @@
 #include "ZDevice.h"
 #include "ZWindow.h"
 #include "ZSwapChain.h"
-// std
-#include <cassert>
-#include <memory>
-#include <vector>
 
 namespace ZZX
 {

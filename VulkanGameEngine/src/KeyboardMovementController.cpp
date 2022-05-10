@@ -1,4 +1,5 @@
-﻿#include "KeyboardMovementController.h"
+﻿#include "pch.h"
+#include "KeyboardMovementController.h"
 
 namespace ZZX
 {

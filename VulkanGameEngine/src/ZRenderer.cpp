@@ -1,7 +1,5 @@
-﻿#include "ZRenderer.h"
-
-#include <stdexcept>
-#include <array>
+﻿#include "pch.h"
+#include "ZRenderer.h"
 
 namespace ZZX
 {
@@ -179,13 +177,13 @@ namespace ZZX
 
 		if (m_zSwapChain == nullptr)
 		{
-			m_zSwapChain = std::make_unique<ZSwapChain>(m_zDevice, extent);
+			m_zSwapChain = std::make_unique<ZSwapChain>(m_zDevice);
 		}
 		// we have an old swap chain that has reusable resources:
 		else
 		{
 			std::shared_ptr<ZSwapChain> oldSwapChain = std::move(m_zSwapChain);
-			m_zSwapChain = std::make_unique<ZSwapChain>(m_zDevice, extent, oldSwapChain);
+			m_zSwapChain = std::make_unique<ZSwapChain>(m_zDevice, oldSwapChain);
 			if (!oldSwapChain->compareSwapFormats(*m_zSwapChain))
 			{
 				throw std::runtime_error("Swap chain image(or depth) format has changed!");

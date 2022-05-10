@@ -1,20 +1,16 @@
-﻿#include "ZSwapChain.h"
-
-#include <stdexcept>
-#include <array>
-#include <iostream>
-#include <utility>
+﻿#include "pch.h"
+#include "ZSwapChain.h"
 
 namespace ZZX
 {
-	ZSwapChain::ZSwapChain(ZDevice& deviceRef, VkExtent2D windowExtent)
-		: m_zDevice{deviceRef}, m_windowExtent{windowExtent}
+	ZSwapChain::ZSwapChain(ZDevice& deviceRef)
+		: m_ZDevice{deviceRef}
 	{
 		init();
 	}
 
-	ZSwapChain::ZSwapChain(ZDevice& deviceRef, VkExtent2D windowExtent, std::shared_ptr<ZSwapChain> previous)
-		: m_zDevice{deviceRef}, m_windowExtent{windowExtent}, m_oldSwapChain{std::move(previous)}
+	ZSwapChain::ZSwapChain(ZDevice& deviceRef, std::shared_ptr<ZSwapChain> previous)
+		: m_ZDevice{deviceRef}, m_oldSwapChain{std::move(previous)}
 	{
 		init();
 
@@ -37,36 +33,36 @@ namespace ZZX
 	{
 		for (auto imageView : m_swapChainImageViews)
 		{
-			vkDestroyImageView(m_zDevice.device(), imageView, nullptr);
+			vkDestroyImageView(m_ZDevice.device(), imageView, nullptr);
 		}
 		m_swapChainImageViews.clear();
 
-		if (m_swapChain != nullptr)
+		if (m_VkSwapchainKHR != nullptr)
 		{
-			vkDestroySwapchainKHR(m_zDevice.device(), m_swapChain, nullptr);
-			m_swapChain = nullptr;
+			vkDestroySwapchainKHR(m_ZDevice.device(), m_VkSwapchainKHR, nullptr);
+			m_VkSwapchainKHR = nullptr;
 		}
 
 		for (int i = 0; i < m_depthImages.size(); i++)
 		{
-			vkDestroyImageView(m_zDevice.device(), m_depthImageViews[i], nullptr);
-			vkDestroyImage(m_zDevice.device(), m_depthImages[i], nullptr);
-			vkFreeMemory(m_zDevice.device(), m_depthImageMemorys[i], nullptr);
+			vkDestroyImageView(m_ZDevice.device(), m_depthImageViews[i], nullptr);
+			vkDestroyImage(m_ZDevice.device(), m_depthImages[i], nullptr);
+			vkFreeMemory(m_ZDevice.device(), m_depthImageMemorys[i], nullptr);
 		}
 
 		for (auto framebuffer : m_swapChainFramebuffers)
 		{
-			vkDestroyFramebuffer(m_zDevice.device(), framebuffer, nullptr);
+			vkDestroyFramebuffer(m_ZDevice.device(), framebuffer, nullptr);
 		}
 
-		vkDestroyRenderPass(m_zDevice.device(), m_renderPass, nullptr);
+		vkDestroyRenderPass(m_ZDevice.device(), m_renderPass, nullptr);
 
 		// cleanup synchronization objects
 		for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
 		{
-			vkDestroySemaphore(m_zDevice.device(), m_renderFinishedSemaphores[i], nullptr);
-			vkDestroySemaphore(m_zDevice.device(), m_imageAvailableSemaphores[i], nullptr);
-			vkDestroyFence(m_zDevice.device(), m_inFlightFences[i], nullptr);
+			vkDestroySemaphore(m_ZDevice.device(), m_renderFinishedSemaphores[i], nullptr);
+			vkDestroySemaphore(m_ZDevice.device(), m_imageAvailableSemaphores[i], nullptr);
+			vkDestroyFence(m_ZDevice.device(), m_inFlightFences[i], nullptr);
 		}
 	}
 
@@ -75,7 +71,7 @@ namespace ZZX
 		// At the start of the frame, we want to wait until the previous frame has finished,
 		// so that the command buffer and semaphores are available to use
 		vkWaitForFences(
-			m_zDevice.device(),
+			m_ZDevice.device(),
 			1,
 			&m_inFlightFences[m_currentFrame],
 			VK_TRUE,
@@ -83,8 +79,8 @@ namespace ZZX
 			std::numeric_limits<uint64_t>::max());
 
 		VkResult result = vkAcquireNextImageKHR(
-			m_zDevice.device(),
-			m_swapChain,
+			m_ZDevice.device(),
+			m_VkSwapchainKHR,
 			// disable the timeout
 			std::numeric_limits<uint64_t>::max(),
 			// specify synchronization objects that are to be signaled when it is safe to render to the image
@@ -102,7 +98,7 @@ namespace ZZX
 	{
 		if (m_imagesInFlight[*imageIndex] != VK_NULL_HANDLE)
 		{
-			vkWaitForFences(m_zDevice.device(), 1, &m_imagesInFlight[*imageIndex], VK_TRUE, UINT64_MAX);
+			vkWaitForFences(m_ZDevice.device(), 1, &m_imagesInFlight[*imageIndex], VK_TRUE, UINT64_MAX);
 		}
 		m_imagesInFlight[*imageIndex] = m_inFlightFences[m_currentFrame];
 
@@ -125,17 +121,17 @@ namespace ZZX
 		};
 
 		// Only reset the fence if we are submitting work
-		vkResetFences(m_zDevice.device(), 1, &m_inFlightFences[m_currentFrame]);
+		vkResetFences(m_ZDevice.device(), 1, &m_inFlightFences[m_currentFrame]);
 
 		// submit the command buffer to the graphics queue
-		if (vkQueueSubmit(m_zDevice.graphicsQueue(), 1, &submitInfo, m_inFlightFences[m_currentFrame]) !=
+		if (vkQueueSubmit(m_ZDevice.graphicsQueue(), 1, &submitInfo, m_inFlightFences[m_currentFrame]) !=
 			VK_SUCCESS)
 		{
 			throw std::runtime_error("failed to submit draw command buffer!");
 		}
 
 		// Present the swap chain image
-		VkSwapchainKHR swapChains[] = {m_swapChain};
+		VkSwapchainKHR swapChains[] = {m_VkSwapchainKHR};
 		VkPresentInfoKHR presentInfo = {
 			.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
 			// specify which semaphores to wait on before presentation can happen
@@ -147,7 +143,7 @@ namespace ZZX
 			.pImageIndices = imageIndex,
 		};
 
-		auto result = vkQueuePresentKHR(m_zDevice.presentQueue(), &presentInfo);
+		auto result = vkQueuePresentKHR(m_ZDevice.presentQueue(), &presentInfo);
 		m_currentFrame = (m_currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
 
 		return result;
@@ -155,12 +151,13 @@ namespace ZZX
 
 	void ZSwapChain::createSwapChain()
 	{
-		SwapChainSupportDetails swapChainSupport = m_zDevice.getSwapChainSupport();
+		SwapChainSupportDetails swapChainSupport = m_ZDevice.getSwapChainSupport();
 
 		VkSurfaceFormatKHR surfaceFormat = chooseSwapSurfaceFormat(swapChainSupport.formats);
 		VkPresentModeKHR presentMode = chooseSwapPresentMode(swapChainSupport.presentModes);
 		VkExtent2D extent = chooseSwapExtent(swapChainSupport.capabilities);
 
+		// number of images (buffers) to use in the swap chain (3 => triple buffering)
 		uint32_t imageCount = swapChainSupport.capabilities.minImageCount + 1;
 		if (swapChainSupport.capabilities.maxImageCount > 0 &&
 			imageCount > swapChainSupport.capabilities.maxImageCount)
@@ -170,52 +167,70 @@ namespace ZZX
 
 		VkSwapchainCreateInfoKHR createInfo = {};
 		createInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
-		createInfo.surface = m_zDevice.surface();
-
+		createInfo.surface = m_ZDevice.surface();
 		createInfo.minImageCount = imageCount;
 		createInfo.imageFormat = surfaceFormat.format;
 		createInfo.imageColorSpace = surfaceFormat.colorSpace;
 		createInfo.imageExtent = extent;
+		// imageArrayLayers will always 1 unless you are developing a stereoscopic 3D application
 		createInfo.imageArrayLayers = 1;
+		// what kind of operations we'll use the images in the swap chain for
+		// in this case, we are rendering directly to the images in the swap chain
 		createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 
-		QueueFamilyIndices indices = m_zDevice.findPhysicalQueueFamilies();
+		// Next, we need to specify how to handle swap chain images that will be used across multiple queue families
+		// That will be the case in our application if the graphics queue family is different from the presentation queue
+
+		QueueFamilyIndices indices = m_ZDevice.findPhysicalQueueFamilies();
 		uint32_t queueFamilyIndices[] = {indices.graphicsFamily.value(), indices.presentFamily.value()};
 
 		if (indices.graphicsFamily != indices.presentFamily)
 		{
+			// enable concurrent sharing mode
 			createInfo.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
+			// these two fields specify which queue families ownership will be shared
 			createInfo.queueFamilyIndexCount = 2;
 			createInfo.pQueueFamilyIndices = queueFamilyIndices;
 		}
 		else
 		{
+			// no sharing b/c graphics and present family are the same queue family
 			createInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
 			createInfo.queueFamilyIndexCount = 0; // Optional
 			createInfo.pQueueFamilyIndices = nullptr; // Optional
 		}
 
+		// are there any transform should be applied to images in the swap chain (like a horizontal flip)? No
 		createInfo.preTransform = swapChainSupport.capabilities.currentTransform;
+
+		// should the alpha channel be used for blending with other windows in the window system? No
 		createInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
 
 		createInfo.presentMode = presentMode;
+
+		// we don't care about the color of pixels that are obscured (for example b/c another window is in front of them)
 		createInfo.clipped = VK_TRUE;
 
-		createInfo.oldSwapchain = m_oldSwapChain == nullptr ? VK_NULL_HANDLE : m_oldSwapChain->m_swapChain;
+		// With vulkan, your swap chain may become invalid or unoptimized while your application is running, for example because the window was resized
+		// In that case the swap chain actually needs to be recreated from scratch and a reference to the old one must be specified in this field
+		createInfo.oldSwapchain = m_oldSwapChain == nullptr ? VK_NULL_HANDLE : m_oldSwapChain->m_VkSwapchainKHR;
 
-		if (vkCreateSwapchainKHR(m_zDevice.device(), &createInfo, nullptr, &m_swapChain) != VK_SUCCESS)
+		if (vkCreateSwapchainKHR(m_ZDevice.device(), &createInfo, nullptr, &m_VkSwapchainKHR) != VK_SUCCESS)
 		{
 			throw std::runtime_error("failed to create swap chain!");
 		}
+
+		// Retrieving the swap chain images
 
 		// we only specified a minimum number of images in the swap chain, so the implementation is
 		// allowed to create a swap chain with more. That's why we'll first query the final number of
 		// images with vkGetSwapchainImagesKHR, then resize the container and finally call it again to
 		// retrieve the handles.
-		vkGetSwapchainImagesKHR(m_zDevice.device(), m_swapChain, &imageCount, nullptr);
+		vkGetSwapchainImagesKHR(m_ZDevice.device(), m_VkSwapchainKHR, &imageCount, nullptr);
 		m_swapChainImages.resize(imageCount);
-		vkGetSwapchainImagesKHR(m_zDevice.device(), m_swapChain, &imageCount, m_swapChainImages.data());
+		vkGetSwapchainImagesKHR(m_ZDevice.device(), m_VkSwapchainKHR, &imageCount, m_swapChainImages.data());
 
+		// the following two lines store the format and extent for future use
 		m_swapChainImageFormat = surfaceFormat.format;
 		m_swapChainExtent = extent;
 	}
@@ -236,7 +251,7 @@ namespace ZZX
 			viewInfo.subresourceRange.baseArrayLayer = 0;
 			viewInfo.subresourceRange.layerCount = 1;
 
-			if (vkCreateImageView(m_zDevice.device(), &viewInfo, nullptr, &m_swapChainImageViews[i]) !=
+			if (vkCreateImageView(m_ZDevice.device(), &viewInfo, nullptr, &m_swapChainImageViews[i]) !=
 				VK_SUCCESS)
 			{
 				throw std::runtime_error("failed to create texture image view!");
@@ -301,7 +316,7 @@ namespace ZZX
 		renderPassInfo.dependencyCount = 1;
 		renderPassInfo.pDependencies = &dependency;
 
-		if (vkCreateRenderPass(m_zDevice.device(), &renderPassInfo, nullptr, &m_renderPass) != VK_SUCCESS)
+		if (vkCreateRenderPass(m_ZDevice.device(), &renderPassInfo, nullptr, &m_renderPass) != VK_SUCCESS)
 		{
 			throw std::runtime_error("failed to create render pass!");
 		}
@@ -325,7 +340,7 @@ namespace ZZX
 			framebufferInfo.layers = 1;
 
 			if (vkCreateFramebuffer(
-				m_zDevice.device(),
+				m_ZDevice.device(),
 				&framebufferInfo,
 				nullptr,
 				&m_swapChainFramebuffers[i]) != VK_SUCCESS)
@@ -363,7 +378,7 @@ namespace ZZX
 			imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 			imageInfo.flags = 0;
 
-			m_zDevice.createImageWithInfo(
+			m_ZDevice.createImageWithInfo(
 				imageInfo,
 				VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
 				m_depthImages[i],
@@ -380,7 +395,7 @@ namespace ZZX
 			viewInfo.subresourceRange.baseArrayLayer = 0;
 			viewInfo.subresourceRange.layerCount = 1;
 
-			if (vkCreateImageView(m_zDevice.device(), &viewInfo, nullptr, &m_depthImageViews[i]) != VK_SUCCESS)
+			if (vkCreateImageView(m_ZDevice.device(), &viewInfo, nullptr, &m_depthImageViews[i]) != VK_SUCCESS)
 			{
 				throw std::runtime_error("failed to create texture image view!");
 			}
@@ -406,11 +421,11 @@ namespace ZZX
 
 		for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
 		{
-			if (vkCreateSemaphore(m_zDevice.device(), &semaphoreInfo, nullptr, &m_imageAvailableSemaphores[i]) !=
+			if (vkCreateSemaphore(m_ZDevice.device(), &semaphoreInfo, nullptr, &m_imageAvailableSemaphores[i]) !=
 				VK_SUCCESS ||
-				vkCreateSemaphore(m_zDevice.device(), &semaphoreInfo, nullptr, &m_renderFinishedSemaphores[i]) !=
+				vkCreateSemaphore(m_ZDevice.device(), &semaphoreInfo, nullptr, &m_renderFinishedSemaphores[i]) !=
 				VK_SUCCESS ||
-				vkCreateFence(m_zDevice.device(), &fenceInfo, nullptr, &m_inFlightFences[i]) != VK_SUCCESS)
+				vkCreateFence(m_ZDevice.device(), &fenceInfo, nullptr, &m_inFlightFences[i]) != VK_SUCCESS)
 			{
 				throw std::runtime_error("failed to create synchronization objects for a frame!");
 			}
@@ -450,30 +465,35 @@ namespace ZZX
 
 	VkExtent2D ZSwapChain::chooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities)
 	{
+		// Vulkan will match currentExtent.width/height with the window resolution (and deal with high DPI display issue)
+		// However, some window managers allow us to differ here by setting currentExtent.width/height to a special value: max value of uint32_t
+
+		// Case 1: currentExtent.width/height matches window resolution:
 		if (capabilities.currentExtent.width != std::numeric_limits<uint32_t>::max())
 		{
 			// use currentExtent (which stores the window size) if possible
 			return capabilities.currentExtent;
 		}
-		// Otherwise, 
+		// Case 2: currentExtent.width/height doesn't match window resolution:
 		// pick the resolution that best matches the window within the minImageExtent and maxImageExtent bounds
-		else
-		{
-			VkExtent2D actualExtent = m_windowExtent;
-			actualExtent.width = std::max(
-				capabilities.minImageExtent.width,
-				std::min(capabilities.maxImageExtent.width, actualExtent.width));
-			actualExtent.height = std::max(
-				capabilities.minImageExtent.height,
-				std::min(capabilities.maxImageExtent.height, actualExtent.height));
+		int width, height;
+		glfwGetFramebufferSize(m_ZDevice.getZWindow().getGLFWWindow(), &width, &height);
+		VkExtent2D actualExtent = {
+			static_cast<uint32_t>(width),
+			static_cast<uint32_t>(height)
+		};
 
-			return actualExtent;
-		}
+		actualExtent.width = std::clamp(actualExtent.width, capabilities.minImageExtent.width,
+		                                capabilities.maxImageExtent.width);
+		actualExtent.height = std::clamp(actualExtent.height, capabilities.minImageExtent.height,
+		                                 capabilities.maxImageExtent.height);
+
+		return actualExtent;
 	}
 
 	VkFormat ZSwapChain::findDepthFormat()
 	{
-		return m_zDevice.findSupportedFormat(
+		return m_ZDevice.findSupportedFormat(
 			{VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT},
 			VK_IMAGE_TILING_OPTIMAL,
 			VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT);

@@ -6,10 +6,6 @@
 #include "ZRenderer.h"
 #include "ZDescriptors.h"
 
-// std
-#include <memory>
-#include <vector>
-
 namespace ZZX
 {
 	class FirstApp

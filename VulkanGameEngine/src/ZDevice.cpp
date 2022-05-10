@@ -1,8 +1,5 @@
-﻿#include "ZDevice.h"
-#include <iostream>
-#include <map>
-#include <set>
-#include <unordered_set>
+﻿#include "pch.h"
+#include "ZDevice.h"
 
 namespace ZZX
 {
@@ -48,7 +45,7 @@ namespace ZZX
 		}
 	}
 
-	ZDevice::ZDevice(ZWindow& window) : m_window{window}
+	ZDevice::ZDevice(ZWindow& window) : m_ZWindow{window}
 	{
 		// Instance creation
 		createInstance();
@@ -67,17 +64,17 @@ namespace ZZX
 	ZDevice::~ZDevice()
 	{
 		// this call will destroy both the command pool and any command buffers allocated from this pool
-		vkDestroyCommandPool(m_device, m_commandPool, nullptr);
+		vkDestroyCommandPool(m_VkDevice, m_VkCommandPool, nullptr);
 
 		// this call will destroy both logical device and device queues
-		vkDestroyDevice(m_device, nullptr);
+		vkDestroyDevice(m_VkDevice, nullptr);
 
 		if (m_enableValidationLayers)
 		{
-			DestroyDebugUtilsMessengerEXT(m_VkInstance, m_debugMessenger, nullptr);
+			DestroyDebugUtilsMessengerEXT(m_VkInstance, m_VkDebugUtilsMessengerEXT, nullptr);
 		}
 
-		vkDestroySurfaceKHR(m_VkInstance, m_surface, nullptr);
+		vkDestroySurfaceKHR(m_VkInstance, m_VkSurfaceKHR, nullptr);
 
 		// this call will destroy both instance and physical device 
 		vkDestroyInstance(m_VkInstance, nullptr);
@@ -154,19 +151,25 @@ namespace ZZX
 
 		// this map stores score-physicalDevice pair by increasing score
 		// multiple GPU could have the same score, thus we use multimap
-		std::multimap<int, VkPhysicalDevice> candidates;
+		std::multimap<int, std::tuple<VkPhysicalDevice, std::string>> candidates;
 
 		// find the first suitable physical device
 		for (const auto& device : devices)
 		{
-			int score = rateDeviceSuitability(device);
-			candidates.insert(std::make_pair(score, device));
+			auto [score, deviceName] = rateDeviceSuitability(device);
+			candidates.insert(std::make_pair(score, std::make_tuple<>(device, deviceName)));
+		}
+
+		std::cout << "Available physical devices:\n";
+		for (const auto& device : candidates)
+		{
+			std::cout << "\tDevice: " << std::get<1>(device.second) << "\n\tScore: " << device.first << '\n' << '\n';
 		}
 
 		// Check if the best candidate is suitable at all
 		if (candidates.rbegin()->first > 0)
 		{
-			m_physicalDevice = candidates.rbegin()->second;
+			m_VkPhysicalDevice = std::get<0>(candidates.rbegin()->second);
 		}
 		else
 		{
@@ -174,7 +177,7 @@ namespace ZZX
 		}
 	}
 
-	int ZDevice::rateDeviceSuitability(VkPhysicalDevice device)
+	std::tuple<int, std::string> ZDevice::rateDeviceSuitability(VkPhysicalDevice device)
 	{
 		// check for basic device properties like the name, type and supported Vulkan version
 		VkPhysicalDeviceProperties deviceProperties;
@@ -198,18 +201,18 @@ namespace ZZX
 		// Application can't function without geometry shaders
 		if (!deviceFeatures.geometryShader)
 		{
-			return 0;
+			return { 0, deviceProperties.deviceName };
 		}
 
 		// check if the physical device has queue families that can process the commands we want to use
-		QueueFamilyIndices indices = findQueueFamilies(device);
+		QueueFamilyIndices indices = findQueueFamilyIndices(device);
 		// Application can't function without requested queue families
 		if (!indices.isComplete())
 		{
-			return 0;
+			return { 0, deviceProperties.deviceName };
 		}
 
-		// strongly prefer a physical device that supports graphics and presentation in the same queue
+		// strongly prefer a physical device that supports graphics and presentation in the same queue (for improved performance)
 		if (indices.graphicsFamily.value() == indices.presentFamily.value())
 		{
 			score += 1000;
@@ -227,15 +230,15 @@ namespace ZZX
 		// Application can't function without adequate swap chain support
 		if (!swapChainAdequate)
 		{
-			return 0;
+			return { 0, deviceProperties.deviceName };
 		}
 
-		return score;
+		return { score, deviceProperties.deviceName };
 	}
 
 	void ZDevice::createLogicalDevice()
 	{
-		QueueFamilyIndices indices = findQueueFamilies(m_physicalDevice);
+		QueueFamilyIndices indices = findQueueFamilyIndices(m_VkPhysicalDevice);
 
 		// Specifying the queues to be created
 		std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
@@ -247,11 +250,12 @@ namespace ZZX
 			VkDeviceQueueCreateInfo queueCreateInfo{};
 			queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
 			queueCreateInfo.queueFamilyIndex = queueFamily;
+			// create a single queue for this queue family
 			queueCreateInfo.queueCount = 1;
+			// this single queue has the highest priority
 			queueCreateInfo.pQueuePriorities = &queuePriority;
 			queueCreateInfos.push_back(queueCreateInfo);
 		}
-
 
 		VkDeviceCreateInfo createInfo{};
 		createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
@@ -275,20 +279,21 @@ namespace ZZX
 			createInfo.enabledLayerCount = 0;
 		}
 
-		if (vkCreateDevice(m_physicalDevice, &createInfo, nullptr, &m_device) != VK_SUCCESS)
+		// Note: the queues are automatically created along with the logical device
+		if (vkCreateDevice(m_VkPhysicalDevice, &createInfo, nullptr, &m_VkDevice) != VK_SUCCESS)
 		{
 			throw std::runtime_error("failed to create logical device!");
 		}
 
 		// Retrieving queue handles
 		// we only have a single queue from each queue family. Thus, queueIndex is 0
-		vkGetDeviceQueue(m_device, indices.graphicsFamily.value(), 0, &m_graphicsQueue);
-		vkGetDeviceQueue(m_device, indices.presentFamily.value(), 0, &m_presentQueue);
+		vkGetDeviceQueue(m_VkDevice, indices.graphicsFamily.value(), 0, &m_VkGraphicsQueue);
+		vkGetDeviceQueue(m_VkDevice, indices.presentFamily.value(), 0, &m_VkPresentQueue);
 	}
 
 	void ZDevice::createCommandPool()
 	{
-		QueueFamilyIndices queueFamilyIndices = findQueueFamilies(m_physicalDevice);
+		QueueFamilyIndices queueFamilyIndices = findQueueFamilyIndices(m_VkPhysicalDevice);
 
 		VkCommandPoolCreateInfo poolInfo{
 			.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
@@ -298,13 +303,13 @@ namespace ZZX
 			.queueFamilyIndex = queueFamilyIndices.graphicsFamily.value(),
 		};
 
-		if (vkCreateCommandPool(m_device, &poolInfo, nullptr, &m_commandPool) != VK_SUCCESS)
+		if (vkCreateCommandPool(m_VkDevice, &poolInfo, nullptr, &m_VkCommandPool) != VK_SUCCESS)
 		{
 			throw std::runtime_error("failed to create command pool!");
 		}
 	}
 
-	void ZDevice::createSurface() { m_window.createWindowSurface(m_VkInstance, &m_surface); }
+	void ZDevice::createSurface() { m_ZWindow.createWindowSurface(m_VkInstance, &m_VkSurfaceKHR); }
 
 	void ZDevice::populateDebugMessengerCreateInfo(
 		VkDebugUtilsMessengerCreateInfoEXT& createInfo)
@@ -332,7 +337,7 @@ namespace ZZX
 		VkDebugUtilsMessengerCreateInfoEXT createInfo{};
 		populateDebugMessengerCreateInfo(createInfo);
 
-		if (CreateDebugUtilsMessengerEXT(m_VkInstance, &createInfo, nullptr, &m_debugMessenger) != VK_SUCCESS)
+		if (CreateDebugUtilsMessengerEXT(m_VkInstance, &createInfo, nullptr, &m_VkDebugUtilsMessengerEXT) != VK_SUCCESS)
 		{
 			throw std::runtime_error("failed to set up debug messenger!");
 		}
@@ -365,10 +370,10 @@ namespace ZZX
 		vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, nullptr);
 		std::vector<VkExtensionProperties> availableExtensions(extensionCount);
 		vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, availableExtensions.data());
-		// std::cout << "available device extensions:\n";
+		std::cout << "Available device extensions:\n";
 		for (const auto& extension : availableExtensions)
 		{
-			// std::cout << '\t' << extension.extensionName << '\n';
+			std::cout << '\t' << extension.extensionName << '\n';
 		}
 		// check if our desired device extensions are supported 
 		std::set<std::string> requiredExtensions(m_deviceExtensions.begin(), m_deviceExtensions.end());
@@ -415,7 +420,7 @@ namespace ZZX
 		return requiredExtensions.empty();
 	}
 
-	QueueFamilyIndices ZDevice::findQueueFamilies(VkPhysicalDevice device)
+	QueueFamilyIndices ZDevice::findQueueFamilyIndices(VkPhysicalDevice device)
 	{
 		QueueFamilyIndices indices;
 		// retrieve supported queue families for this physical device
@@ -434,7 +439,7 @@ namespace ZZX
 
 			// find at least one queue family that supports presentation
 			VkBool32 presentSupport = false;
-			vkGetPhysicalDeviceSurfaceSupportKHR(device, i, m_surface, &presentSupport);
+			vkGetPhysicalDeviceSurfaceSupportKHR(device, i, m_VkSurfaceKHR, &presentSupport);
 			if (presentSupport)
 			{
 				indices.presentFamily = i;
@@ -453,26 +458,29 @@ namespace ZZX
 	{
 		SwapChainSupportDetails details;
 
+		// Note: all of the swap chain support querying functions have VkPhysicalDevice and VkSurfaceKHR as first two parameters
+		// because they are the core components of the swap chain
+
 		// query basic surface capabilities
-		vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, m_surface, &details.capabilities);
+		vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, m_VkSurfaceKHR, &details.capabilities);
 
 		// query the supported surface formats
 		uint32_t formatCount;
-		vkGetPhysicalDeviceSurfaceFormatsKHR(device, m_surface, &formatCount, nullptr);
+		vkGetPhysicalDeviceSurfaceFormatsKHR(device, m_VkSurfaceKHR, &formatCount, nullptr);
 		if (formatCount != 0)
 		{
 			details.formats.resize(formatCount);
-			vkGetPhysicalDeviceSurfaceFormatsKHR(device, m_surface, &formatCount, details.formats.data());
+			vkGetPhysicalDeviceSurfaceFormatsKHR(device, m_VkSurfaceKHR, &formatCount, details.formats.data());
 		}
 
 		// query the supported presentation modes
 		uint32_t presentModeCount;
-		vkGetPhysicalDeviceSurfacePresentModesKHR(device, m_surface, &presentModeCount, nullptr);
+		vkGetPhysicalDeviceSurfacePresentModesKHR(device, m_VkSurfaceKHR, &presentModeCount, nullptr);
 		if (presentModeCount != 0)
 		{
 			details.presentModes.resize(presentModeCount);
 			vkGetPhysicalDeviceSurfacePresentModesKHR(device,
-			                                          m_surface,
+			                                          m_VkSurfaceKHR,
 			                                          &presentModeCount,
 			                                          details.presentModes.data());
 		}
@@ -486,7 +494,7 @@ namespace ZZX
 		for (VkFormat format : candidates)
 		{
 			VkFormatProperties props;
-			vkGetPhysicalDeviceFormatProperties(m_physicalDevice, format, &props);
+			vkGetPhysicalDeviceFormatProperties(m_VkPhysicalDevice, format, &props);
 
 			if (tiling == VK_IMAGE_TILING_LINEAR && (props.linearTilingFeatures & features) == features)
 			{
@@ -504,7 +512,7 @@ namespace ZZX
 	uint32_t ZDevice::findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties)
 	{
 		VkPhysicalDeviceMemoryProperties memProperties;
-		vkGetPhysicalDeviceMemoryProperties(m_physicalDevice, &memProperties);
+		vkGetPhysicalDeviceMemoryProperties(m_VkPhysicalDevice, &memProperties);
 		for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++)
 		{
 			if ((typeFilter & (1 << i)) &&
@@ -530,25 +538,25 @@ namespace ZZX
 		bufferInfo.usage = usage;
 		bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
-		if (vkCreateBuffer(m_device, &bufferInfo, nullptr, &buffer) != VK_SUCCESS)
+		if (vkCreateBuffer(m_VkDevice, &bufferInfo, nullptr, &buffer) != VK_SUCCESS)
 		{
 			throw std::runtime_error("failed to create buffer!");
 		}
 
 		VkMemoryRequirements memRequirements;
-		vkGetBufferMemoryRequirements(m_device, buffer, &memRequirements);
+		vkGetBufferMemoryRequirements(m_VkDevice, buffer, &memRequirements);
 
 		VkMemoryAllocateInfo allocInfo{};
 		allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
 		allocInfo.allocationSize = memRequirements.size;
 		allocInfo.memoryTypeIndex = findMemoryType(memRequirements.memoryTypeBits, properties);
 
-		if (vkAllocateMemory(m_device, &allocInfo, nullptr, &bufferMemory) != VK_SUCCESS)
+		if (vkAllocateMemory(m_VkDevice, &allocInfo, nullptr, &bufferMemory) != VK_SUCCESS)
 		{
 			throw std::runtime_error("failed to allocate buffer memory!");
 		}
 
-		vkBindBufferMemory(m_device, buffer, bufferMemory, 0);
+		vkBindBufferMemory(m_VkDevice, buffer, bufferMemory, 0);
 	}
 
 	VkCommandBuffer ZDevice::beginSingleTimeCommands()
@@ -556,11 +564,11 @@ namespace ZZX
 		VkCommandBufferAllocateInfo allocInfo{};
 		allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
 		allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-		allocInfo.commandPool = m_commandPool;
+		allocInfo.commandPool = m_VkCommandPool;
 		allocInfo.commandBufferCount = 1;
 
 		VkCommandBuffer commandBuffer;
-		vkAllocateCommandBuffers(m_device, &allocInfo, &commandBuffer);
+		vkAllocateCommandBuffers(m_VkDevice, &allocInfo, &commandBuffer);
 
 		VkCommandBufferBeginInfo beginInfo{};
 		beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -579,10 +587,10 @@ namespace ZZX
 		submitInfo.commandBufferCount = 1;
 		submitInfo.pCommandBuffers = &commandBuffer;
 
-		vkQueueSubmit(m_graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
-		vkQueueWaitIdle(m_graphicsQueue);
+		vkQueueSubmit(m_VkGraphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
+		vkQueueWaitIdle(m_VkGraphicsQueue);
 
-		vkFreeCommandBuffers(m_device, m_commandPool, 1, &commandBuffer);
+		vkFreeCommandBuffers(m_VkDevice, m_VkCommandPool, 1, &commandBuffer);
 	}
 
 	void ZDevice::copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size)
@@ -632,25 +640,25 @@ namespace ZZX
 		VkImage& image,
 		VkDeviceMemory& imageMemory)
 	{
-		if (vkCreateImage(m_device, &imageInfo, nullptr, &image) != VK_SUCCESS)
+		if (vkCreateImage(m_VkDevice, &imageInfo, nullptr, &image) != VK_SUCCESS)
 		{
 			throw std::runtime_error("failed to create image!");
 		}
 
 		VkMemoryRequirements memRequirements;
-		vkGetImageMemoryRequirements(m_device, image, &memRequirements);
+		vkGetImageMemoryRequirements(m_VkDevice, image, &memRequirements);
 
 		VkMemoryAllocateInfo allocInfo{};
 		allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
 		allocInfo.allocationSize = memRequirements.size;
 		allocInfo.memoryTypeIndex = findMemoryType(memRequirements.memoryTypeBits, properties);
 
-		if (vkAllocateMemory(m_device, &allocInfo, nullptr, &imageMemory) != VK_SUCCESS)
+		if (vkAllocateMemory(m_VkDevice, &allocInfo, nullptr, &imageMemory) != VK_SUCCESS)
 		{
 			throw std::runtime_error("failed to allocate image memory!");
 		}
 
-		if (vkBindImageMemory(m_device, image, imageMemory, 0) != VK_SUCCESS)
+		if (vkBindImageMemory(m_VkDevice, image, imageMemory, 0) != VK_SUCCESS)
 		{
 			throw std::runtime_error("failed to bind image memory!");
 		}

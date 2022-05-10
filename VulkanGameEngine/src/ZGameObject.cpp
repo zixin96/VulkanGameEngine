@@ -1,4 +1,5 @@
-﻿#include "ZGameObject.h"
+﻿#include "pch.h"
+#include "ZGameObject.h"
 
 namespace ZZX
 {
