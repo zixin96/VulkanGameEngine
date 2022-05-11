@@ -89,7 +89,7 @@ namespace ZZX
 		// make sure only one frame is rendering at a time 
 		std::vector<VkFence> m_inFlightFences;
 
-		std::vector<VkFence> m_imagesInFlight;
+		// std::vector<VkFence> m_imagesInFlight;
 		size_t m_currentFrame = 0;
 	};
 };

@@ -96,11 +96,11 @@ namespace ZZX
 	VkResult ZSwapChain::submitCommandBuffers(
 		const VkCommandBuffer* buffers, uint32_t* imageIndex)
 	{
-		if (m_imagesInFlight[*imageIndex] != VK_NULL_HANDLE)
+		/*if (m_imagesInFlight[*imageIndex] != VK_NULL_HANDLE)
 		{
 			vkWaitForFences(m_ZDevice.device(), 1, &m_imagesInFlight[*imageIndex], VK_TRUE, UINT64_MAX);
 		}
-		m_imagesInFlight[*imageIndex] = m_inFlightFences[m_currentFrame];
+		m_imagesInFlight[*imageIndex] = m_inFlightFences[m_currentFrame];*/
 
 		VkSemaphore waitSemaphores[] = {m_imageAvailableSemaphores[m_currentFrame]};
 		VkPipelineStageFlags waitStages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
@@ -463,7 +463,7 @@ namespace ZZX
 		m_imageAvailableSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
 		m_renderFinishedSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
 		m_inFlightFences.resize(MAX_FRAMES_IN_FLIGHT);
-		m_imagesInFlight.resize(imageCount(), VK_NULL_HANDLE);
+		// m_imagesInFlight.resize(imageCount(), VK_NULL_HANDLE);
 
 		VkSemaphoreCreateInfo semaphoreInfo = {
 			.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO
