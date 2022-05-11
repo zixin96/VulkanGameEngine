@@ -40,6 +40,7 @@ namespace ZZX
 		auto commandBuffer = getCurrentCommandBuffer();
 		VkCommandBufferBeginInfo beginInfo{
 			.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+			// The command buffer will be rerecorded right after executing it once
 			.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
 		};
 		if (vkBeginCommandBuffer(commandBuffer, &beginInfo) != VK_SUCCESS)
@@ -117,6 +118,7 @@ namespace ZZX
 		// define in which regions pixels will actually be stored
 		// Any pixels outside the scissor rectangles will be discarded by the rasterizer
 		// "cut" the triangle
+		// In this case, we want to render to the entire framebuffer
 		VkRect2D scissor{{0, 0}, m_zSwapChain->getSwapChainExtent()};
 
 		vkCmdSetViewport(commandBuffer, 0, 1, &viewport);

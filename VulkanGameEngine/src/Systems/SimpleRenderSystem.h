@@ -24,6 +24,6 @@ namespace ZZX
 
 		ZDevice& m_zDevice;
 		std::unique_ptr<ZPipeline> m_zPipeline;
-		VkPipelineLayout m_pipelineLayout;
+		VkPipelineLayout m_VkPipelineLayout;
 	};
 }

@@ -17,7 +17,7 @@ namespace ZZX
 		ZSwapChain& operator=(const ZSwapChain&) = delete;
 
 		VkFramebuffer getFrameBuffer(int index) { return m_swapChainFramebuffers[index]; }
-		VkRenderPass getRenderPass() { return m_renderPass; }
+		VkRenderPass getRenderPass() { return m_VkRenderPass; }
 		VkImageView getImageView(int index) { return m_swapChainImageViews[index]; }
 
 		// this count will likely be 2 (for double buffering) or 3 (for triple buffering)
@@ -65,7 +65,7 @@ namespace ZZX
 		VkExtent2D m_swapChainExtent;
 
 		std::vector<VkFramebuffer> m_swapChainFramebuffers;
-		VkRenderPass m_renderPass;
+		VkRenderPass m_VkRenderPass;
 
 		std::vector<VkImage> m_depthImages;
 		std::vector<VkImageView> m_depthImageViews;

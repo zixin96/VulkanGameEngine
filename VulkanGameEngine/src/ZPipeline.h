@@ -22,8 +22,8 @@ namespace ZZX
 		VkPipelineDepthStencilStateCreateInfo depthStencilInfo;
 		std::vector<VkDynamicState> dynamicStateEnables;
 		VkPipelineDynamicStateCreateInfo dynamicStateInfo;
-		VkPipelineLayout pipelineLayout = nullptr;
-		VkRenderPass renderPass = nullptr;
+		VkPipelineLayout m_VkPipelineLayout = nullptr;
+		VkRenderPass m_VkRenderPass = nullptr;
 		uint32_t subpass = 0;
 	};
 
@@ -49,9 +49,9 @@ namespace ZZX
 		                            const std::string& fragFilepath,
 		                            const PipelineConfigInfo& config_info);
 		void createShaderModule(const std::vector<char>& code, VkShaderModule* shaderModule);
-		ZDevice& m_zDevice;
-		VkPipeline m_graphicsPipeline;
-		VkShaderModule m_vertShaderModule;
-		VkShaderModule m_fragShaderModule;
+		ZDevice& m_ZDevice;
+		VkPipeline m_VkPipeline;
+		VkShaderModule m_VkVertexShaderModule;
+		VkShaderModule m_VkFragmentShaderModule;
 	};
 }

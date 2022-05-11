@@ -19,7 +19,7 @@ namespace ZZX
 
 	SimpleRenderSystem::~SimpleRenderSystem()
 	{
-		vkDestroyPipelineLayout(m_zDevice.device(), m_pipelineLayout, nullptr);
+		vkDestroyPipelineLayout(m_zDevice.device(), m_VkPipelineLayout, nullptr);
 	}
 
 	void SimpleRenderSystem::createPipelineLayout(VkDescriptorSetLayout globalSetLayout)
@@ -44,7 +44,7 @@ namespace ZZX
 		if (vkCreatePipelineLayout(m_zDevice.device(),
 		                           &pipelineLayoutInfo,
 		                           nullptr,
-		                           &m_pipelineLayout) != VK_SUCCESS)
+		                           &m_VkPipelineLayout) != VK_SUCCESS)
 		{
 			throw std::runtime_error("failed to create pipeline layout!");
 		}
@@ -52,12 +52,12 @@ namespace ZZX
 
 	void SimpleRenderSystem::createPipeline(VkRenderPass renderPass)
 	{
-		assert(m_pipelineLayout != nullptr && "Cannot create pipeline before pipeline layout");
+		assert(m_VkPipelineLayout != nullptr && "Cannot create pipeline before pipeline layout");
 
 		PipelineConfigInfo pipelineConfig{};
 		ZPipeline::defaultPipelineConfigInfo(pipelineConfig);
-		pipelineConfig.renderPass = renderPass;
-		pipelineConfig.pipelineLayout = m_pipelineLayout;
+		pipelineConfig.m_VkRenderPass = renderPass;
+		pipelineConfig.m_VkPipelineLayout = m_VkPipelineLayout;
 		m_zPipeline = std::make_unique<ZPipeline>(m_zDevice,
 		                                          pipelineConfig,
 		                                          "assets/shaders/simple_shader.vert.spv",
@@ -71,7 +71,7 @@ namespace ZZX
 		m_zPipeline->bind(frameInfo.commandBuffer);
 		vkCmdBindDescriptorSets(frameInfo.commandBuffer,
 		                        VK_PIPELINE_BIND_POINT_GRAPHICS,
-		                        m_pipelineLayout,
+		                        m_VkPipelineLayout,
 		                        0,
 		                        1,
 		                        &frameInfo.globalDescriptorSet,
@@ -87,7 +87,7 @@ namespace ZZX
 				.normalMatrix = obj.m_transform.normalMatrix(),
 			};
 			vkCmdPushConstants(frameInfo.commandBuffer,
-			                   m_pipelineLayout,
+			                   m_VkPipelineLayout,
 			                   VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
 			                   0,
 			                   sizeof(SimplePushConstantData),

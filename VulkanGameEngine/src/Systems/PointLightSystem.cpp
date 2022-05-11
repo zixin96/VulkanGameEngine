@@ -65,8 +65,8 @@ namespace ZZX
 		pipelineConfig.attributeDescriptions.clear();
 		pipelineConfig.bindingDescriptions.clear();
 
-		pipelineConfig.renderPass = renderPass;
-		pipelineConfig.pipelineLayout = m_pipelineLayout;
+		pipelineConfig.m_VkRenderPass = renderPass;
+		pipelineConfig.m_VkPipelineLayout = m_pipelineLayout;
 		m_zPipeline = std::make_unique<ZPipeline>(m_zDevice,
 		                                          pipelineConfig,
 		                                          "assets/shaders/point_light.vert.spv",

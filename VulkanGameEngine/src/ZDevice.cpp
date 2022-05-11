@@ -299,7 +299,7 @@ namespace ZZX
 			.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
 			// TODO: Vulkan-tutorial only has RESET bit 
 			.flags = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT | VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
-			// this command pool will allocate command buffers that are submitted on the graphics queue
+			// Specify that the command buffers allocated from this command pool will be submitted on the graphics queue
 			.queueFamilyIndex = queueFamilyIndices.graphicsFamily.value(),
 		};
 
@@ -572,6 +572,7 @@ namespace ZZX
 
 		VkCommandBufferBeginInfo beginInfo{};
 		beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+		// The command buffer will be rerecorded right after executing it once
 		beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
 
 		vkBeginCommandBuffer(commandBuffer, &beginInfo);
